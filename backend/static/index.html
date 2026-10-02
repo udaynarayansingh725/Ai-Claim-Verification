@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claim Verification & AI Detection Engine</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <!-- ============ AUTH SCREEN ============ -->
+  <div id="auth-screen" class="auth-wrap">
+    <div class="auth-card">
+      <h1>🔍 Claim Verification &<br/>AI Content Detection Engine</h1>
+      <p class="muted">Minor Project · BCA 5th Semester · IMS Noida</p>
+      <div class="tabs">
+        <button id="tab-login" class="tab active">Login</button>
+        <button id="tab-register" class="tab">Register</button>
+      </div>
+      <form id="auth-form">
+        <input id="auth-name" type="text" placeholder="Full name" style="display:none" />
+        <input id="auth-email" type="email" placeholder="Email" required />
+        <input id="auth-password" type="password" placeholder="Password (min 6 chars)" required />
+        <button type="submit" class="btn-primary" id="auth-btn">Login</button>
+      </form>
+      <p id="auth-error" class="error"></p>
+      <p class="muted small">Demo admin: admin@example.com / admin123</p>
+    </div>
+  </div>
+
+  <!-- ============ MAIN APP ============ -->
+  <div id="app-screen" style="display:none">
+    <header class="topbar">
+      <span class="logo">🔍 VerifyEngine</span>
+      <nav>
+        <button class="nav-btn active" data-mode="claim">Claim Verification</button>
+        <button class="nav-btn" data-mode="text">AI Text Detection</button>
+        <button class="nav-btn" data-mode="image">AI Image Detection</button>
+        <button class="nav-btn" data-mode="history">History</button>
+      </nav>
+      <div class="user-box">
+        <span id="user-name"></span>
+        <button id="logout-btn" class="btn-ghost">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Claim -->
+      <section id="panel-claim" class="panel active">
+        <h2>Verify a Factual Claim</h2>
+        <p class="muted">Enter a claim — the engine extracts keywords, searches evidence and gives a preliminary verdict.</p>
+        <textarea id="claim-input" rows="4" placeholder="e.g. Humans use only 10 percent of their brains"></textarea>
+        <button class="btn-primary" onclick="submitClaim()">Verify Claim</button>
+        <div id="claim-result" class="result"></div>
+      </section>
+
+      <!-- Text -->
+      <section id="panel-text" class="panel">
+        <h2>AI-Generated Text Detection</h2>
+        <p class="muted">Paste text to estimate the likelihood that it was AI-generated. Signals are shown for transparency.</p>
+        <textarea id="text-input" rows="8" placeholder="Paste text here (min 30 characters)..."></textarea>
+        <button class="btn-primary" onclick="submitText()">Analyse Text</button>
+        <div id="text-result" class="result"></div>
+      </section>
+
+      <!-- Image -->
+      <section id="panel-image" class="panel">
+        <h2>AI-Generated Image Detection</h2>
+        <p class="muted">Upload an image (JPG/PNG/WEBP/BMP, max 10 MB). The engine analyses metadata, ELA and frequency signals.</p>
+        <input type="file" id="image-input" accept="image/*" />
+        <button class="btn-primary" onclick="submitImage()">Analyse Image</button>
+        <div id="image-result" class="result"></div>
+      </section>
+
+      <!-- History -->
+      <section id="panel-history" class="panel">
+        <h2>Analysis History</h2>
+        <div id="history-list"></div>
+      </section>
+    </main>
+
+    <footer class="muted small">
+      Results are probabilistic first-level assessments — not a replacement for expert fact-checking.
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

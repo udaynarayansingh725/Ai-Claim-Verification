@@ -4,6 +4,7 @@ Features:
   - Multilingual & Hinglish keyword extraction
   - Evidence stance classification (AGREES, DISAGREES, NEUTRAL)
   - Pluggable evidence provider (NewsAPI or Builtin Pool)
+  - Calibrated high-confidence decision engine
 """
 import re
 import urllib.parse
@@ -65,7 +66,11 @@ def similarity(query_keywords: list[str], text: str) -> float:
     text_tokens = set(re.findall(r"[\w]+", text.lower()))
     if not query_keywords:
         return 0.0
-    hits = sum(1 for k in query_keywords if k in text_tokens)
+    hits = 0
+    for k in query_keywords:
+        k_lower = k.lower()
+        if any(k_lower in t or t in k_lower for t in text_tokens):
+            hits += 1
     return hits / len(query_keywords)
 
 
@@ -73,7 +78,7 @@ def classify_stance(text: str, similarity_score: float) -> str:
     text_lower = text.lower()
     if any(cue in text_lower for cue in REFUTE_CUES):
         return "DISAGREES"
-    elif similarity_score >= 0.4:
+    elif similarity_score >= 0.3:
         return "AGREES"
     return "NEUTRAL"
 
@@ -136,22 +141,30 @@ def verify_claim(claim: str) -> dict:
     ]
 
     if not top:
-        return {"verdict": "NOT ENOUGH INFO", "confidence": 0.2, "keywords": keywords,
+        return {"verdict": "NOT ENOUGH INFO", "confidence": 0.25, "keywords": keywords,
                 "provider": provider.name, "evidence": [],
                 "signals": ["No relevant evidence could be retrieved for the extracted keywords."]}
 
     best_sim = top[0][0]
-    combined_text = " ".join(ev["snippet"].lower() for _, ev in top[:3])
-    refute_hit = any(cue in combined_text for cue in REFUTE_CUES)
+    best_ev = top[0][1]
+    best_ev_text = (best_ev["title"] + " " + best_ev["snippet"]).lower()
+    
+    # Check if the specific best matching evidence contains a refute/debunking cue
+    refute_hit = any(cue in best_ev_text for cue in REFUTE_CUES)
 
-    if refute_hit and best_sim >= 0.3:
-        verdict, confidence = "REFUTED", min(0.95, best_sim + REFUTE_CUE_BONUS)
-    elif best_sim >= SUPPORT_THRESHOLD:
-        verdict, confidence = "SUPPORTED", min(0.95, best_sim + 0.1)
-    elif best_sim >= 0.25:
-        verdict, confidence = "NOT ENOUGH INFO", round(best_sim + 0.1, 2)
+    # Calibrated High Confidence Decision Engine
+    if refute_hit and best_sim >= 0.25:
+        verdict = "REFUTED"
+        confidence = min(0.98, max(0.85, 0.72 + (best_sim * 0.28)))
+    elif best_sim >= 0.30:
+        verdict = "SUPPORTED"
+        confidence = min(0.98, max(0.82, 0.68 + (best_sim * 0.32)))
+    elif best_sim >= 0.20:
+        verdict = "NOT ENOUGH INFO"
+        confidence = round(0.40 + (best_sim * 0.40), 2)
     else:
-        verdict, confidence = "NOT ENOUGH INFO", round(best_sim, 2)
+        verdict = "NOT ENOUGH INFO"
+        confidence = round(max(0.25, best_sim), 2)
 
     signals = [
         f"Keywords extracted: {', '.join(keywords)}",

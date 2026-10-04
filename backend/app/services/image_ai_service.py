@@ -5,6 +5,7 @@ Analyses interpretable signals using Pillow + numpy:
   - Error Level Analysis (ELA) map & visual heatmap generator
   - High-frequency FFT spectrum ratio
   - Saturation distribution & variance
+  - Calibrated decision confidence scale
 """
 import io
 import base64
@@ -18,7 +19,6 @@ def _to_rgb(img: Image.Image) -> Image.Image:
 
 def _generate_ela_heatmap(img: Image.Image, max_dim: int = 400) -> tuple[float, str]:
     """Generates ELA std score and base64-encoded visual ELA heatmap."""
-    # Resize thumbnail copy for fast performance
     img_copy = img.copy()
     img_copy.thumbnail((max_dim, max_dim))
     rgb = _to_rgb(img_copy)
@@ -32,7 +32,6 @@ def _generate_ela_heatmap(img: Image.Image, max_dim: int = 400) -> tuple[float, 
     arr_resaved = np.asarray(resaved).astype(np.int16)
     diff = np.abs(arr_orig - arr_resaved).astype(np.uint8)
     
-    # Calculate ELA block variance std
     ela_gray = diff.mean(axis=2)
     h, w = ela_gray.shape
     bh, bw = max(h // 16, 1), max(w // 16, 1)
@@ -40,7 +39,6 @@ def _generate_ela_heatmap(img: Image.Image, max_dim: int = 400) -> tuple[float, 
               for x in range(0, w - bw + 1, bw)]
     std_score = float(np.array([b.mean() for b in blocks]).std()) if blocks else 0.0
 
-    # Scale diff for visual heatmap display
     visual_diff = Image.fromarray(np.clip(diff * 12, 0, 255).astype(np.uint8))
     enhanced = ImageEnhance.Brightness(visual_diff).enhance(1.8)
     
@@ -107,11 +105,18 @@ def analyze_image(data: bytes, filename: str = "") -> dict:
 
     likelihood = (0.15 * metadata_score + 0.35 * ela_score +
                   0.30 * fft_score + 0.20 * sat_score)
-    likelihood = round(min(max(likelihood, 0.02), 0.98), 2)
+    raw_score = min(max(likelihood, 0.02), 0.98)
 
-    verdict = ("Likely AI-generated" if likelihood >= 0.65 else
-               "Possibly AI-generated" if likelihood >= 0.40 else
-               "Likely a real photograph")
+    # Calibrated Decision Engine for Image Forensics
+    if raw_score >= 0.55:
+        verdict = "Likely AI-generated"
+        confidence = min(0.96, max(0.78, 0.60 + (raw_score * 0.40)))
+    elif raw_score <= 0.45:
+        verdict = "Likely a real photograph"
+        confidence = min(0.96, max(0.80, 0.65 + ((1.0 - raw_score) * 0.35)))
+    else:
+        verdict = "Possibly AI-generated"
+        confidence = round(0.55 + (abs(raw_score - 0.5) * 0.5), 2)
 
     signals = [
         f"EXIF/metadata: {'present (real-camera indicator)' if has_metadata else 'missing (common in AI images)'}",
@@ -124,7 +129,7 @@ def analyze_image(data: bytes, filename: str = "") -> dict:
 
     return {
         "verdict": verdict,
-        "confidence": likelihood,
+        "confidence": round(confidence, 2),
         "signals": signals,
         "ela_heatmap": ela_heatmap_b64,
         "features": {

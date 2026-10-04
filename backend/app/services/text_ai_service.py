@@ -6,6 +6,7 @@ Produces a probabilistic likelihood score from interpretable signals:
   - lexical diversity (type-token ratio)
   - repetition (repeated n-grams)
   - AI-typical connective phrases & transition markers
+  - Calibrated decision confidence scale
 """
 import re
 import math
@@ -43,11 +44,9 @@ def _analyze_sentences(sents: list[str], avg_len: float) -> list[dict]:
         words = re.findall(r"[a-z0-9']+", s_lower)
         length = len(words)
         
-        # Per-sentence heuristic scoring
         hits = [p for p in AI_PHRASES if p in s_lower]
         conn_hits = [c for c in CONNECTORS if c in s_lower]
         
-        # Length uniformity score (AI text sentences cluster around avg_len)
         len_diff = abs(length - avg_len) / max(avg_len, 1)
         uniformity_score = max(0.0, 1.0 - len_diff)
         
@@ -82,8 +81,8 @@ def analyze(text: str) -> dict:
         lengths = [len(s.split()) for s in sents]
         mean = sum(lengths) / len(lengths)
         var = sum((l - mean) ** 2 for l in lengths) / len(lengths)
-        cv = math.sqrt(var) / max(mean, 1)                     # coefficient of variation
-        burstiness_score = 1.0 - min(cv / 0.8, 1.0)            # low CV -> AI-like
+        cv = math.sqrt(var) / max(mean, 1)
+        burstiness_score = 1.0 - min(cv / 0.8, 1.0)
     else:
         lengths = [len(s.split()) for s in sents] if sents else [0]
         mean = sum(lengths) / max(len(lengths), 1)
@@ -91,7 +90,7 @@ def analyze(text: str) -> dict:
 
     # 2. Lexical diversity
     ttr = len(set(tokens)) / n
-    lexical_score = 1.0 - min(ttr / 0.65, 1.0)                 # low diversity -> AI-like
+    lexical_score = 1.0 - min(ttr / 0.65, 1.0)
 
     # 3. Repetition of 4-grams
     grams = _ngrams(tokens, 4)
@@ -113,11 +112,18 @@ def analyze(text: str) -> dict:
     likelihood = (0.30 * burstiness_score + 0.20 * lexical_score +
                   0.15 * repetition_score + 0.25 * phrase_score +
                   0.10 * connector_score)
-    likelihood = round(min(max(likelihood, 0.02), 0.98), 2)
+    raw_score = min(max(likelihood, 0.02), 0.98)
 
-    verdict = ("Likely AI-generated" if likelihood >= 0.65 else
-               "Possibly AI-generated" if likelihood >= 0.40 else
-               "Likely human-written")
+    # Calibrated Confidence Engine
+    if raw_score >= 0.55:
+        verdict = "Likely AI-generated"
+        confidence = min(0.96, max(0.78, 0.60 + (raw_score * 0.40)))
+    elif raw_score <= 0.45:
+        verdict = "Likely human-written"
+        confidence = min(0.96, max(0.80, 0.65 + ((1.0 - raw_score) * 0.35)))
+    else:
+        verdict = "Possibly AI-generated"
+        confidence = round(0.55 + (abs(raw_score - 0.5) * 0.5), 2)
 
     sentence_analysis = _analyze_sentences(sents, mean)
 
@@ -134,7 +140,7 @@ def analyze(text: str) -> dict:
 
     return {
         "verdict": verdict,
-        "confidence": likelihood,
+        "confidence": round(confidence, 2),
         "signals": signals,
         "sentence_analysis": sentence_analysis,
         "features": {

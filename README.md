@@ -1,5 +1,9 @@
 # Claim Verification & AI-Generated Content Detection Engine
 
+[![Live Web Application](https://img.shields.io/badge/Live_Demo-https%3A%2F%2Fai--claim--verification.onrender.com-brightgreen?style=for-the-badge&logo=render)](https://ai-claim-verification.onrender.com/)
+
+🌐 **Live Demo Application:** [https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)
+
 Combines three verification & detection tools in one modern web app:
 1. **Claim Verification** — claim → keywords extraction → evidence retrieval → cross-verification → verdict (SUPPORTED / REFUTED / NOT ENOUGH INFO)
 2. **AI Text Detection** — likelihood score with explainable signals (burstiness, lexical diversity, repetition, connective density)
@@ -8,6 +12,14 @@ Combines three verification & detection tools in one modern web app:
 > Gives a **first-level, understandable assessment** — not a replacement for expert human fact-checking.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/udaynarayansingh725/Ai-Claim-Verification)
+
+---
+
+## 🌐 Live Web Application
+- **URL:** [https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)
+- **Demo Credentials:**
+  - **Email:** `admin@example.com`
+  - **Password:** `admin123`
 
 ---
 
@@ -55,28 +67,20 @@ Without a key, the built-in evidence knowledge base is used offline.
 
 ## Deployment Guide
 
-### Option 1: Deploy on Render
+### Live Deployment
+The application is deployed live on Render:
+👉 **[https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)**
+
+### Deploying Your Own Copy on Render
 1. Push this repository to GitHub.
 2. In [Render Dashboard](https://dashboard.render.com), click **New +** → **Web Service**.
 3. Select your GitHub repository (`Ai-Claim-Verification`).
-4. Set the following:
-   - **Environment:** `Python 3`
+4. Select the **Free ($0 / month)** instance type.
+5. Set:
+   - **Environment:** `Python`
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
-5. Click **Create Web Service**.
-
-*Alternatively, use Render Blueprints with the included `render.yaml`.*
-
-### Option 2: Deploy on Railway
-1. Go to [Railway.app](https://railway.app).
-2. Click **New Project** → **Deploy from GitHub repo**.
-3. Select this repository. Railway will automatically detect the `Procfile` / `Dockerfile` and deploy.
-
-### Option 3: Deploy with Docker
-```bash
-docker build -t ai-claim-verification .
-docker run -p 8000:8000 ai-claim-verification
-```
+6. Click **Create Web Service**.
 
 ---
 
@@ -88,7 +92,8 @@ Ai-Claim-Verification/
 ├── requirements.txt
 ├── Procfile                # Heroku / Render / Railway deployment
 ├── Dockerfile              # Docker container deployment
-├── render.yaml             # Render Blueprint
+├── render.yaml             # Render Blueprint configuration
+├── runtime.txt             # Python runtime specification
 ├── .env.example
 ├── database/
 │   └── schema.sql          # MySQL/PostgreSQL schema

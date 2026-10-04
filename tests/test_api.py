@@ -135,4 +135,4 @@ def test_history_saved():
     assert item.status_code == 200
 
 def test_health():
-    assert client.get("/api/health").json() == {"status": "ok"}
+    assert client.get("/api/health").json()["status"] == "ok"

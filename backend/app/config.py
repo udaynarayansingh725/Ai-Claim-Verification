@@ -18,10 +18,18 @@ def _load_env():
 
 _load_env()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
+# Security & Secrets
+SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY", "dev-secret-key-change-in-production-12345")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_MINUTES = 60 * 24          # 1 day
 
+# Admin Credentials (configured via environment variables)
+ADMIN_NAME = os.getenv("ADMIN_NAME", "System Admin")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+# Database Configuration (PostgreSQL supported via DATABASE_URL or SQLite fallback)
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 _raw_db = os.getenv("DB_PATH", str(PROJECT_ROOT / "app.db"))
 if _raw_db == ":memory:":
     DB_PATH = ":memory:"
@@ -29,8 +37,17 @@ elif Path(_raw_db).is_absolute():
     DB_PATH = _raw_db
 else:
     DB_PATH = str(PROJECT_ROOT / _raw_db)
+
 NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
 STATIC_DIR = BASE_DIR / "static"
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
+# Google OAuth
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+
+# Rate Limits
+RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
 
 # Claim verification tuning
 SUPPORT_THRESHOLD = 0.45      # min similarity to mark SUPPORTED

@@ -1,10 +1,10 @@
-"""SQLite connection layer (stdlib sqlite3).
+"""Database connection & query layer.
 
-Swap note: to use MySQL/PostgreSQL, import database/schema.sql and replace
-this module's queries with your driver of choice (same table/column names).
+Supports SQLite (default) and PostgreSQL (via DATABASE_URL).
 """
 import sqlite3
-from .config import DB_PATH
+import os
+from .config import DB_PATH, DATABASE_URL
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     is_admin INTEGER DEFAULT 0,
+    api_key TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -42,6 +43,11 @@ def get_conn():
 def init_db():
     conn = get_conn()
     conn.executescript(SCHEMA)
+    # Ensure api_key column exists if database was created prior
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN api_key TEXT UNIQUE")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     conn.commit()
     conn.close()
 

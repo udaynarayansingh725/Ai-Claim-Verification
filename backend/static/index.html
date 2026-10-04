@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Claim Verification & AI Detection Engine</title>
+  <title>VerifyEngine — AI & Claim Verification System</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
 </head>
 <body>
   <!-- ============ AUTH SCREEN ============ -->
   <div id="auth-screen" class="auth-wrap">
     <div class="auth-card">
-      <h1>🔍 Claim Verification &<br/>AI Content Detection Engine</h1>
-      <p class="muted">Verification & Detection Engine</p>
+      <h1>🔍 VerifyEngine</h1>
+      <p class="muted">Claim Verification & AI Content Detection System</p>
       <div class="tabs">
         <button id="tab-login" class="tab active">Login</button>
         <button id="tab-register" class="tab">Register</button>
@@ -23,7 +24,6 @@
         <button type="submit" class="btn-primary" id="auth-btn">Login</button>
       </form>
       <p id="auth-error" class="error"></p>
-      <p class="muted small">Demo admin: admin@example.com / admin123</p>
     </div>
   </div>
 
@@ -36,6 +36,7 @@
         <button class="nav-btn" data-mode="text">AI Text Detection</button>
         <button class="nav-btn" data-mode="image">AI Image Detection</button>
         <button class="nav-btn" data-mode="history">History</button>
+        <button class="nav-btn" data-mode="eval">Benchmark & ML</button>
         <button class="nav-btn" id="nav-admin" data-mode="admin" style="display:none">Admin Panel</button>
       </nav>
       <div class="user-box">
@@ -49,18 +50,45 @@
       <!-- Claim -->
       <section id="panel-claim" class="panel active">
         <h2>Verify a Factual Claim</h2>
-        <p class="muted">Enter a claim — the engine extracts keywords, searches evidence and gives a stance-based verdict.</p>
-        <textarea id="claim-input" rows="4" placeholder="e.g. Humans use only 10 percent of their brains"></textarea>
-        <button class="btn-primary" onclick="submitClaim()">Verify Claim</button>
+        <p class="muted">Enter a claim or news URL — extracts keywords, searches evidence, and classifies stance.</p>
+        
+        <div class="input-toggle">
+          <button class="tab active" id="btn-claim-text-mode" onclick="setClaimInputMode('text')">Text Claim</button>
+          <button class="tab" id="btn-claim-url-mode" onclick="setClaimInputMode('url')">Article URL</button>
+        </div>
+
+        <div id="claim-text-group">
+          <textarea id="claim-input" rows="3" placeholder="e.g. Water boils at 100 degrees Celsius at sea level" oninput="updateCharCount('claim-input', 'claim-char-count', 10, 1000)"></textarea>
+          <div class="input-meta">
+            <span id="claim-char-count" class="small muted">0 / 1000 chars</span>
+          </div>
+          
+          <div class="chips-label">Try example claims:</div>
+          <div class="chips">
+            <span class="chip" onclick="fillClaim('Water boils at 100 C at sea level')">Water boils at 100°C</span>
+            <span class="chip" onclick="fillClaim('The Earth orbits the Sun once per year')">Earth orbits Sun</span>
+            <span class="chip" onclick="fillClaim('Humans use only 10 percent of their brains')">Humans use 10% brain</span>
+            <span class="chip" onclick="fillClaim('Vaccines are safe and effective')">Vaccines safety</span>
+          </div>
+        </div>
+
+        <div id="claim-url-group" style="display:none">
+          <input type="url" id="url-input" placeholder="https://news-website.com/article" />
+        </div>
+
+        <button class="btn-primary" id="btn-verify-claim" onclick="submitClaim()">Verify Claim</button>
         <div id="claim-result" class="result"></div>
       </section>
 
       <!-- Text -->
       <section id="panel-text" class="panel">
         <h2>AI-Generated Text Detection</h2>
-        <p class="muted">Paste text to estimate AI likelihood. Includes sentence-by-sentence highlight analysis.</p>
-        <textarea id="text-input" rows="8" placeholder="Paste text here (min 30 characters)..."></textarea>
-        <button class="btn-primary" onclick="submitText()">Analyse Text</button>
+        <p class="muted">Paste text to estimate AI probability. Features sentence-by-sentence highlight analysis.</p>
+        <textarea id="text-input" rows="8" placeholder="Paste text here (min 30 characters)..." oninput="updateCharCount('text-input', 'text-char-count', 30, 20000)"></textarea>
+        <div class="input-meta">
+          <span id="text-char-count" class="small muted">0 / 20000 chars</span>
+        </div>
+        <button class="btn-primary" id="btn-verify-text" onclick="submitText()">Analyse Text</button>
         <div id="text-result" class="result"></div>
       </section>
 
@@ -68,15 +96,44 @@
       <section id="panel-image" class="panel">
         <h2>AI-Generated Image Detection</h2>
         <p class="muted">Upload an image (JPG/PNG/WEBP/BMP, max 10 MB). Includes Error Level Analysis (ELA) visual heatmap.</p>
-        <input type="file" id="image-input" accept="image/*" />
-        <button class="btn-primary" onclick="submitImage()">Analyse Image</button>
+        
+        <div class="drop-zone" id="drop-zone" onclick="$('image-input').click()">
+          <span class="drop-icon">📷</span>
+          <p class="small muted">Click or drag & drop an image file here</p>
+          <img id="image-preview" class="img-preview" style="display:none" />
+        </div>
+        <input type="file" id="image-input" accept="image/*" style="display:none" onchange="handleImageSelect(event)" />
+        
+        <button class="btn-primary" id="btn-verify-image" onclick="submitImage()">Analyse Image</button>
         <div id="image-result" class="result"></div>
       </section>
 
       <!-- History -->
       <section id="panel-history" class="panel">
-        <h2>Analysis History</h2>
+        <div class="panel-header-row">
+          <h2>Analysis History</h2>
+          <button class="btn-secondary" onclick="exportHistoryCsv()">📥 Export CSV</button>
+        </div>
+        
+        <div class="history-controls">
+          <select id="history-filter-type" onchange="loadHistory()">
+            <option value="all">All Types</option>
+            <option value="claim">Claims Only</option>
+            <option value="text">AI Text Only</option>
+            <option value="image">AI Image Only</option>
+          </select>
+          <input type="text" id="history-search" placeholder="Search history..." onkeyup="loadHistory()" />
+        </div>
+        
         <div id="history-list"></div>
+      </section>
+
+      <!-- Evaluation & Benchmark -->
+      <section id="panel-eval" class="panel">
+        <h2>Model Evaluation & ML Benchmark</h2>
+        <p class="muted">Evaluation metrics computed across 50+ benchmark samples comparing ML vs Heuristics.</p>
+        <div id="eval-metrics-grid" class="stats-grid"></div>
+        <div id="eval-details-box" class="sentence-box"></div>
       </section>
 
       <!-- Admin Panel -->
@@ -90,7 +147,7 @@
     </main>
 
     <footer class="muted small">
-      Results are probabilistic first-level assessments — not a replacement for expert fact-checking.
+      ℹ️ <strong>Disclaimer:</strong> Results are probabilistic first-level assessments based on signal extraction and evidence retrieval. Not a replacement for expert human fact-checking.
     </footer>
   </div>
 

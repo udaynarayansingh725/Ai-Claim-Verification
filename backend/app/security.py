@@ -1,7 +1,8 @@
-"""Password hashing + JWT using only the Python standard library.
+"""Password hashing, JWT & API Key handling using Python standard library.
 
 Passwords: PBKDF2-HMAC-SHA256, 100k iterations, random salt.
 Tokens: HS256 JWT (header.payload.signature, base64url).
+API Keys: Secret tokens prefixed with `ve_live_` for public developer API access.
 """
 import base64
 import hashlib
@@ -29,6 +30,12 @@ def verify_password(password: str, stored: str) -> bool:
         return hmac.compare_digest(dk.hex(), dk_hex)
     except (ValueError, AttributeError):
         return False
+
+
+# ---------- API Key Generation ----------
+def generate_api_key() -> str:
+    raw_key = os.urandom(24).hex()
+    return f"ve_live_{raw_key}"
 
 
 # ---------- base64url helpers ----------

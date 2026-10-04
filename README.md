@@ -1,132 +1,94 @@
 # Claim Verification & AI-Generated Content Detection Engine
 
+[![Build Status](https://github.com/udaynarayansingh725/Ai-Claim-Verification/actions/workflows/ci.yml/badge.svg)](https://github.com/udaynarayansingh725/Ai-Claim-Verification/actions)
 [![Live Web Application](https://img.shields.io/badge/Live_Demo-https%3A%2F%2Fai--claim--verification.onrender.com-brightgreen?style=for-the-badge&logo=render)](https://ai-claim-verification.onrender.com/)
 
-🌐 **Live Demo Application:** [https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)
+🌐 **Live Demo Application:** [https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)  
+📚 **Interactive Swagger API Docs:** [https://ai-claim-verification.onrender.com/docs](https://ai-claim-verification.onrender.com/docs)
 
-Combines three verification & detection tools in one modern web app:
-1. **Claim Verification** — claim → keywords extraction → evidence retrieval → cross-verification → verdict (SUPPORTED / REFUTED / NOT ENOUGH INFO)
-2. **AI Text Detection** — likelihood score with explainable signals (burstiness, lexical diversity, repetition, connective density)
-3. **AI Image Detection** — likelihood score with explainable signals (EXIF metadata, Error Level Analysis, FFT frequency spectrum, saturation stats)
+Combines five advanced verification & analytics engines in one modern web application:
+1. **Claim Verification** — claim → keywords extraction → evidence retrieval → stance classification (`AGREES`, `DISAGREES`, `NEUTRAL`) → verdict.
+2. **URL Article Verification** — URL extraction → article body parsing → automated claim checking.
+3. **AI Text Detection** — likelihood score with sentence-by-sentence highlight breakdown (burstiness, lexical diversity, repetition, connectives).
+4. **AI Image Forensics** — likelihood score with interactive visual **Error Level Analysis (ELA) Heatmap** canvas & FFT frequency spectrum.
+5. **ML Benchmark Evaluation & Analytics** — 50+ labeled benchmark sample evaluation comparing scikit-learn Logistic Regression vs Heuristic rules.
 
-> Gives a **first-level, understandable assessment** — not a replacement for expert human fact-checking.
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/udaynarayansingh725/Ai-Claim-Verification)
-
----
-
-## 🌐 Live Web Application
-- **URL:** [https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)
-- **Demo Credentials:**
-  - **Email:** `admin@example.com`
-  - **Password:** `admin123`
+> ⓘ **Note on Probabilistic Nature:** Results are probabilistic first-level assessments based on signal extraction and evidence retrieval — not a replacement for expert human fact-checking.
 
 ---
 
-## Tech Stack
-- **Frontend:** HTML5 + CSS3 + Vanilla JavaScript (single page application, served by FastAPI)
-- **Backend:** Python 3.10+ + FastAPI + Uvicorn
-- **Database:** SQLite (default, zero setup). `database/schema.sql` included for MySQL/PostgreSQL.
-- **Auth:** JWT tokens, PBKDF2 password hashing (stdlib only)
-- **Testing:** Pytest
+## 🏗️ Architecture Diagram
 
----
-
-## How to Run Locally
-
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. Start the server:
-   ```bash
-   python run.py
-   ```
-   *Or specify a custom port:*
-   ```bash
-   python run.py 8080
-   ```
-
-3. Open **http://127.0.0.1:8000** (or **http://127.0.0.1:8080**) in your browser.
-
-4. Default admin account:
-   - **Email:** `admin@example.com`
-   - **Password:** `admin123`
-
----
-
-## Optional: Live Evidence Search (NewsAPI)
-Copy `.env.example` to `.env` and set `NEWSAPI_KEY`:
-```env
-NEWSAPI_KEY=your_key_here
-```
-Without a key, the built-in evidence knowledge base is used offline.
-
----
-
-## Deployment Guide
-
-### Live Deployment
-The application is deployed live on Render:
-👉 **[https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)**
-
-### Deploying Your Own Copy on Render
-1. Push this repository to GitHub.
-2. In [Render Dashboard](https://dashboard.render.com), click **New +** → **Web Service**.
-3. Select your GitHub repository (`Ai-Claim-Verification`).
-4. Select the **Free ($0 / month)** instance type.
-5. Set:
-   - **Environment:** `Python`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
-6. Click **Create Web Service**.
-
----
-
-## Project Structure
-```
-Ai-Claim-Verification/
-├── run.py                  # Entry point
-├── main.py                 # Root convenience runner
-├── requirements.txt
-├── Procfile                # Heroku / Render / Railway deployment
-├── Dockerfile              # Docker container deployment
-├── render.yaml             # Render Blueprint configuration
-├── runtime.txt             # Python runtime specification
-├── .env.example
-├── database/
-│   └── schema.sql          # MySQL/PostgreSQL schema
-├── backend/
-│   ├── app/
-│   │   ├── main.py         # FastAPI app + static mount
-│   │   ├── config.py       # Configuration & env loader
-│   │   ├── db.py           # SQLite connection layer
-│   │   ├── security.py     # JWT + PBKDF2 password hashing
-│   │   ├── models.py       # Database query helpers
-│   │   ├── schemas.py      # Pydantic request & response schemas
-│   │   ├── deps.py         # Auth dependency injection
-│   │   ├── services/
-│   │   │   ├── claim_service.py      # Claim verification engine
-│   │   │   ├── text_ai_service.py    # AI text likelihood detector
-│   │   │   └── image_ai_service.py   # AI image ELA & FFT detector
-│   │   └── routers/
-│   │       ├── auth.py
-│   │       ├── claims.py
-│   │       ├── detect.py
-│   │       └── history.py
-│   └── static/
-│       ├── index.html
-│       ├── css/styles.css
-│       └── js/app.js
-└── tests/
-    └── test_api.py         # Comprehensive unit, negative & security tests
+```mermaid
+flowchart TD
+    User["👤 User / Chrome Extension / API Client"] -->|HTTP / REST| FastAPI["⚡ FastAPI Gateway"]
+    FastAPI --> Auth["🔒 Security & Auth (JWT / API Key)"]
+    
+    subgraph Services["Engine Services Layer"]
+        Auth --> ClaimEngine["🔍 Claim Service (TF-IDF / Stance)"]
+        Auth --> TextEngine["🤖 AI Text Service (Burstiness / Sentences)"]
+        Auth --> ImageEngine["🖼️ Image AI Service (ELA / FFT Spectrum)"]
+        Auth --> URLEngine["🌐 URL Extractor Service"]
+        Auth --> MLEngine["📊 ML Evaluation Service (Scikit-Learn)"]
+    end
+    
+    ClaimEngine -->|Live Query| NewsAPI["📰 NewsAPI / Knowledge Base"]
+    Services --> DB["🗄️ Database (SQLite / PostgreSQL)"]
 ```
 
 ---
 
-## Testing
-Run the automated test suite:
+## ⚡ API Quickstart & `curl` Examples
+
+### 1. Verify a Factual Claim
 ```bash
-python -m pytest tests/ -v
+curl -X POST "https://ai-claim-verification.onrender.com/api/verify-claim" \
+     -H "Content-Type: application/json" \
+     -d '{"claim": "Water boils at 100 degrees Celsius at sea level"}'
 ```
+
+### 2. Detect AI-Generated Text
+```bash
+curl -X POST "https://ai-claim-verification.onrender.com/api/detect-text" \
+     -H "Content-Type: application/json" \
+     -d '{"text": "In today digital age, it is important to note that technology plays a crucial role. Furthermore, innovation drives progress."}'
+```
+
+### 3. Check System Health & Uptime
+```bash
+curl "https://ai-claim-verification.onrender.com/api/health"
+```
+
+---
+
+## 🧩 Chrome Extension (Manifest V3)
+
+The repository includes a complete **Chrome Extension** in the `chrome-extension/` folder.
+
+### Installation Instructions:
+1. Open Google Chrome and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** in the top-right toggle.
+3. Click **Load unpacked** and select the [`chrome-extension`](chrome-extension/) folder.
+4. Highlight any text on any webpage, right-click, and choose **"🔍 Verify Claim with VerifyEngine"**!
+
+---
+
+## 🐳 Docker & Docker Compose Deployment
+
+Run the full production stack (FastAPI + PostgreSQL + Redis):
+```bash
+docker-compose up --build -d
+```
+App will be running at `http://localhost:8000`.
+
+---
+
+## ⚠️ Render Cold-Start Note
+When using the free tier of Render, services spin down after periods of inactivity. If the service hasn't received traffic recently, the initial HTTP request may take **30-50 seconds** while the instance spins up. Subsequent requests respond instantly.
+
+---
+
+## 👨‍💻 Developer & Author
+* **GitHub Profile:** [udaynarayansingh725](https://github.com/udaynarayansingh725)
+* **Project Repository:** [Ai-Claim-Verification](https://github.com/udaynarayansingh725/Ai-Claim-Verification)
+* **License:** MIT License

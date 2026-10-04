@@ -11,7 +11,7 @@
   <div id="auth-screen" class="auth-wrap">
     <div class="auth-card">
       <h1>🔍 Claim Verification &<br/>AI Content Detection Engine</h1>
-      <p class="muted">Minor Project · BCA 5th Semester · IMS Noida</p>
+      <p class="muted">Verification & Detection Engine</p>
       <div class="tabs">
         <button id="tab-login" class="tab active">Login</button>
         <button id="tab-register" class="tab">Register</button>
@@ -36,8 +36,10 @@
         <button class="nav-btn" data-mode="text">AI Text Detection</button>
         <button class="nav-btn" data-mode="image">AI Image Detection</button>
         <button class="nav-btn" data-mode="history">History</button>
+        <button class="nav-btn" id="nav-admin" data-mode="admin" style="display:none">Admin Panel</button>
       </nav>
       <div class="user-box">
+        <button id="theme-toggle" class="btn-ghost small">🌙 Theme</button>
         <span id="user-name"></span>
         <button id="logout-btn" class="btn-ghost">Logout</button>
       </div>
@@ -47,7 +49,7 @@
       <!-- Claim -->
       <section id="panel-claim" class="panel active">
         <h2>Verify a Factual Claim</h2>
-        <p class="muted">Enter a claim — the engine extracts keywords, searches evidence and gives a preliminary verdict.</p>
+        <p class="muted">Enter a claim — the engine extracts keywords, searches evidence and gives a stance-based verdict.</p>
         <textarea id="claim-input" rows="4" placeholder="e.g. Humans use only 10 percent of their brains"></textarea>
         <button class="btn-primary" onclick="submitClaim()">Verify Claim</button>
         <div id="claim-result" class="result"></div>
@@ -56,7 +58,7 @@
       <!-- Text -->
       <section id="panel-text" class="panel">
         <h2>AI-Generated Text Detection</h2>
-        <p class="muted">Paste text to estimate the likelihood that it was AI-generated. Signals are shown for transparency.</p>
+        <p class="muted">Paste text to estimate AI likelihood. Includes sentence-by-sentence highlight analysis.</p>
         <textarea id="text-input" rows="8" placeholder="Paste text here (min 30 characters)..."></textarea>
         <button class="btn-primary" onclick="submitText()">Analyse Text</button>
         <div id="text-result" class="result"></div>
@@ -65,7 +67,7 @@
       <!-- Image -->
       <section id="panel-image" class="panel">
         <h2>AI-Generated Image Detection</h2>
-        <p class="muted">Upload an image (JPG/PNG/WEBP/BMP, max 10 MB). The engine analyses metadata, ELA and frequency signals.</p>
+        <p class="muted">Upload an image (JPG/PNG/WEBP/BMP, max 10 MB). Includes Error Level Analysis (ELA) visual heatmap.</p>
         <input type="file" id="image-input" accept="image/*" />
         <button class="btn-primary" onclick="submitImage()">Analyse Image</button>
         <div id="image-result" class="result"></div>
@@ -75,6 +77,15 @@
       <section id="panel-history" class="panel">
         <h2>Analysis History</h2>
         <div id="history-list"></div>
+      </section>
+
+      <!-- Admin Panel -->
+      <section id="panel-admin" class="panel">
+        <h2>Admin Platform Analytics</h2>
+        <p class="muted">Live system metrics and user management overview.</p>
+        <div id="admin-stats-grid" class="stats-grid"></div>
+        <h3>Registered Platform Users</h3>
+        <div id="admin-users-list"></div>
       </section>
     </main>
 

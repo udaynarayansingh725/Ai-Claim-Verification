@@ -1,9 +1,9 @@
-"""Claim verification: claim -> keywords -> evidence search -> cross-verification -> verdict.
+"""Claim verification: claim -> keywords -> evidence search -> stance detection -> cross-verification -> verdict.
 
-Design principle (from project PPT): each inference step is independently
-testable and replaceable. The evidence provider is pluggable:
-  - NewsAPI provider (live web search) when NEWSAPI_KEY is set
-  - BuiltinEvidenceProvider (offline demo pool) otherwise
+Features:
+  - Multilingual & Hinglish keyword extraction
+  - Evidence stance classification (AGREES, DISAGREES, NEUTRAL)
+  - Pluggable evidence provider (NewsAPI or Builtin Pool)
 """
 import re
 import urllib.parse
@@ -20,17 +20,15 @@ STOPWORDS = {
     "no","nor","not","only","own","same","so","than","too","very","just","and","but","if","or","because",
     "while","that","this","these","those","it","its","he","she","they","them","his","her","their","we",
     "you","i","me","my","our","your","who","whom","what","which","whose","about","also","says","said",
-    "say","according","claim","claims","report","reports","reported",
+    "say","according","claim","claims","report","reports","reported","hai","hain","ki","ka","ke","ko","se"
 }
 
-# Contradiction cues: if these appear near matched evidence, the claim is likely REFUTED
 REFUTE_CUES = {
     "false", "fake", "hoax", "debunked", "misleading", "incorrect", "untrue",
     "no evidence", "not true", "fabricated", "rumor", "rumour", "scam", "fraud",
-    "manipulated", "out of context", "disputed", "denied", "incorrectly",
+    "manipulated", "out of context", "disputed", "denied", "incorrectly", "jhoot", "galat"
 }
 
-# Small offline knowledge base used when no external search key is configured.
 BUILTIN_KB = [
     {"title": "Earth orbits the Sun", "source": "Science Reference",
      "snippet": "The Earth revolves around the Sun in an elliptical orbit, completing one revolution in about 365.25 days."},
@@ -54,8 +52,7 @@ BUILTIN_KB = [
 
 
 def extract_keywords(text: str, top_k: int = 8) -> list[str]:
-    """Simple keyword extraction: lowercase, strip punctuation, remove stopwords."""
-    tokens = re.findall(r"[a-z0-9]+", text.lower())
+    tokens = re.findall(r"[\w]+", text.lower())
     freq = {}
     for t in tokens:
         if t not in STOPWORDS and len(t) > 2:
@@ -65,16 +62,23 @@ def extract_keywords(text: str, top_k: int = 8) -> list[str]:
 
 
 def similarity(query_keywords: list[str], text: str) -> float:
-    """Jaccard-style overlap between query keywords and evidence text."""
-    text_tokens = set(re.findall(r"[a-z0-9]+", text.lower()))
+    text_tokens = set(re.findall(r"[\w]+", text.lower()))
     if not query_keywords:
         return 0.0
     hits = sum(1 for k in query_keywords if k in text_tokens)
     return hits / len(query_keywords)
 
 
+def classify_stance(text: str, similarity_score: float) -> str:
+    text_lower = text.lower()
+    if any(cue in text_lower for cue in REFUTE_CUES):
+        return "DISAGREES"
+    elif similarity_score >= 0.4:
+        return "AGREES"
+    return "NEUTRAL"
+
+
 class NewsAPIProvider:
-    """Live evidence search via NewsAPI (https://newsapi.org)."""
     name = "NewsAPI"
 
     def search(self, keywords: list[str], limit: int = MAX_EVIDENCE) -> list[dict]:
@@ -94,7 +98,6 @@ class NewsAPIProvider:
 
 
 class BuiltinEvidenceProvider:
-    """Offline demo evidence pool (used when no API key is configured)."""
     name = "Builtin Knowledge Pool"
 
     def search(self, keywords: list[str], limit: int = MAX_EVIDENCE) -> list[dict]:
@@ -121,8 +124,14 @@ def verify_claim(claim: str) -> dict:
     top = scored[:MAX_EVIDENCE]
 
     evidence = [
-        {"source": ev["source"], "title": ev["title"], "snippet": ev["snippet"],
-         "url": ev.get("url"), "similarity": round(sim, 3)}
+        {
+            "source": ev["source"],
+            "title": ev["title"],
+            "snippet": ev["snippet"],
+            "url": ev.get("url"),
+            "similarity": round(sim, 3),
+            "stance": classify_stance(ev["title"] + " " + ev["snippet"], sim)
+        }
         for sim, ev in top
     ]
 
@@ -150,7 +159,7 @@ def verify_claim(claim: str) -> dict:
         f"Best evidence match: {round(best_sim * 100)}% keyword overlap",
     ]
     if refute_hit:
-        signals.append("Contradiction cues detected in evidence (e.g. 'false', 'debunked').")
+        signals.append("Contradiction/debunking cues detected in retrieved evidence.")
     if verdict == "NOT ENOUGH INFO":
         signals.append("Evidence is weak or ambiguous — treat the claim as unverified.")
 

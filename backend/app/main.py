@@ -5,11 +5,11 @@ from .config import STATIC_DIR
 from .db import init_db
 from .security import hash_password
 from . import models
-from .routers import auth, claims, detect, history
+from .routers import auth, claims, detect, history, admin
 
 app = FastAPI(title="Claim Verification & AI Content Detection Engine",
-              description="First-level claim checking + AI text/image detection (Minor Project)",
-              version="1.0.0")
+              description="First-level claim checking + AI text/image detection",
+              version="2.0.0")
 
 
 @app.get("/api/health")
@@ -17,7 +17,7 @@ def health():
     return {"status": "ok"}
 
 
-for r in (auth.router, claims.router, detect.router, history.router):
+for r in (auth.router, claims.router, detect.router, history.router, admin.router):
     app.include_router(r)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

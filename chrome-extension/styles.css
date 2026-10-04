@@ -1,0 +1,9 @@
+body { width: 320px; font-family: system-ui, sans-serif; margin: 0; padding: 12px; background: #f8fafc; color: #1e293b; }
+.header { border-bottom: 2px solid #14345c; padding-bottom: 8px; margin-bottom: 12px; }
+.header h3 { margin: 0; font-size: 15px; color: #14345c; }
+label { font-size: 11px; font-weight: bold; color: #64748b; margin-top: 8px; display: block; }
+input, textarea { width: 100%; box-sizing: border-box; padding: 8px; margin: 4px 0 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; }
+.actions { display: flex; gap: 6px; }
+.btn { flex: 1; background: #14345c; color: #fff; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+.btn-sec { background: #0284c7; }
+.result { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 12px; background: #fff; border: 1px solid #e2e8f0; }

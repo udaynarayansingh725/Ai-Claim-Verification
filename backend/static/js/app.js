@@ -1,13 +1,106 @@
-// ---------- state ----------
+// ---------- State & Configuration ----------
 let token = localStorage.getItem("token");
 let currentUser = null;
 let mode = "login"; // login | register
 let claimInputMode = "text"; // text | url
 let selectedImageFile = null;
+let selectedBatchFile = null;
+let currentLanguage = localStorage.getItem("lang") || "en";
+let evalChartInstance = null;
+let adminPieChartInstance = null;
+let adminBarChartInstance = null;
+let activeShareVerdict = "";
 
 const $ = (id) => document.getElementById(id);
 
-// ---------- theme switcher ----------
+// ---------- Language Dictionary (English & Hindi) ----------
+const translations = {
+  en: {
+    title: "VerifyEngine — AI & Claim Verification System",
+    claimNav: "Claim Verification",
+    textNav: "AI Text Detection",
+    imageNav: "AI Image Detection",
+    batchNav: "Batch CSV",
+    historyNav: "History",
+    evalNav: "Benchmark & ML",
+    settingsNav: "API & Extension",
+    adminNav: "Admin Panel",
+    claimTitle: "Verify a Factual Claim",
+    claimSub: "Enter a claim or news URL — extracts keywords, searches evidence, and classifies stance.",
+    tryExamples: "Try example claims:",
+    verifyBtn: "Verify Claim",
+    textTitle: "AI-Generated Text Detection",
+    textSub: "Paste text to estimate AI probability. Features sentence-by-sentence highlight analysis.",
+    analyseTextBtn: "Analyse Text",
+    imageTitle: "AI-Generated Image Detection",
+    imageSub: "Upload an image (JPG/PNG/WEBP/BMP, max 10 MB). Includes Error Level Analysis (ELA) visual heatmap.",
+    dropText: "Click or drag & drop an image file here",
+    analyseImgBtn: "Analyse Image",
+    historyTitle: "Analysis History",
+  },
+  hi: {
+    title: "VerifyEngine — AI और दावा सत्यापन प्रणाली",
+    claimNav: "दावा सत्यापन",
+    textNav: "AI टेक्स्ट पहचान",
+    imageNav: "AI इमेज पहचान",
+    batchNav: "बैच CSV",
+    historyNav: "इतिहास",
+    evalNav: "बेंचमार्क और ML",
+    settingsNav: "API और एक्सटेंशन",
+    adminNav: "एडमिन पैनल",
+    claimTitle: "तथ्यात्मक दावे का सत्यापन करें",
+    claimSub: "दावा या समाचार URL दर्ज करें — कीवर्ड निकालेगा, साक्ष्य खोजेगा और रुख वर्गीकृत करेगा।",
+    tryExamples: "उदाहरण दावे आज़माएं:",
+    verifyBtn: "दावा सत्यापित करें",
+    textTitle: "AI-जनरेटेड टेक्स्ट की पहचान",
+    textSub: "AI संभावना का अनुमान लगाने के लिए टेक्स्ट पेस्ट करें। वाक्य-दर-वाक्य हाइलाइट विश्लेषण।",
+    analyseTextBtn: "टेक्स्ट का विश्लेषण करें",
+    imageTitle: "AI-जनरेटेड इमेज की पहचान",
+    imageSub: "एक इमेज अपलोड करें (JPG/PNG/WEBP/BMP, अधिकतम 10 MB)। ELA विज़ुअल हीटमैप शामिल है।",
+    dropText: "यहाँ क्लिक करें या इमेज फ़ाइल खींचकर छोड़ें",
+    analyseImgBtn: "इमेज का विश्लेषण करें",
+    historyTitle: "विश्लेषण का इतिहास",
+  }
+};
+
+function toggleLanguage() {
+  currentLanguage = currentLanguage === "en" ? "hi" : "en";
+  localStorage.setItem("lang", currentLanguage);
+  applyTranslations();
+  showToast(currentLanguage === "hi" ? "भाषा बदलकर हिंदी कर दी गई है" : "Language switched to English", "info");
+}
+
+function applyTranslations() {
+  const t = translations[currentLanguage];
+  $("lang-toggle").textContent = currentLanguage === "en" ? "🌐 EN" : "🌐 HI";
+  
+  if ($("nav-claim")) $("nav-claim").textContent = t.claimNav;
+  if ($("nav-text")) $("nav-text").textContent = t.textNav;
+  if ($("nav-image")) $("nav-image").textContent = t.imageNav;
+  if ($("nav-batch")) $("nav-batch").textContent = t.batchNav;
+  if ($("nav-history")) $("nav-history").textContent = t.historyNav;
+  if ($("nav-eval")) $("nav-eval").textContent = t.evalNav;
+  if ($("nav-settings")) $("nav-settings").textContent = t.settingsNav;
+  if ($("nav-admin")) $("nav-admin").textContent = t.adminNav;
+  
+  if ($("lbl-verify-claim-title")) $("lbl-verify-claim-title").textContent = t.claimTitle;
+  if ($("lbl-verify-claim-sub")) $("lbl-verify-claim-sub").textContent = t.claimSub;
+  if ($("lbl-try-examples")) $("lbl-try-examples").textContent = t.tryExamples;
+  if ($("btn-verify-claim")) $("btn-verify-claim").textContent = t.verifyBtn;
+  
+  if ($("lbl-text-title")) $("lbl-text-title").textContent = t.textTitle;
+  if ($("lbl-text-sub")) $("lbl-text-sub").textContent = t.textSub;
+  if ($("btn-verify-text")) $("btn-verify-text").textContent = t.analyseTextBtn;
+  
+  if ($("lbl-image-title")) $("lbl-image-title").textContent = t.imageTitle;
+  if ($("lbl-image-sub")) $("lbl-image-sub").textContent = t.imageSub;
+  if ($("lbl-drop-text")) $("lbl-drop-text").textContent = t.dropText;
+  if ($("btn-verify-image")) $("btn-verify-image").textContent = t.analyseImgBtn;
+  
+  if ($("lbl-history-title")) $("lbl-history-title").textContent = t.historyTitle;
+}
+
+// ---------- Theme switcher ----------
 const themeBtn = $("theme-toggle");
 if (localStorage.getItem("theme") === "dark") {
   document.body.classList.add("dark-mode");
@@ -19,10 +112,26 @@ if (themeBtn) {
     const isDark = document.body.classList.contains("dark-mode");
     localStorage.setItem("theme", isDark ? "dark" : "light");
     themeBtn.textContent = isDark ? "☀️ Light" : "🌙 Dark";
+    showToast(isDark ? "Dark theme enabled" : "Light theme enabled", "info");
   };
 }
 
-// ---------- auth ----------
+// ---------- Toast Notifications ----------
+function showToast(msg, type = "info") {
+  const container = $("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span>ℹ️ ${escapeHtml(msg)}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity 0.3s";
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ---------- Auth Handlers ----------
 $("tab-login").onclick = () => setTab("login");
 $("tab-register").onclick = () => setTab("register");
 
@@ -49,9 +158,14 @@ $("auth-form").onsubmit = async (e) => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    if (!res.ok) { $("auth-error").textContent = data.detail || "Something went wrong"; setButtonLoading(btn, false, mode === "register" ? "Create Account" : "Login"); return; }
+    if (!res.ok) {
+      $("auth-error").textContent = data.detail || "Something went wrong";
+      setButtonLoading(btn, false, mode === "register" ? "Create Account" : "Login");
+      return;
+    }
     token = data.access_token;
     localStorage.setItem("token", token);
+    showToast("Welcome to VerifyEngine!", "info");
     await boot();
   } catch (err) {
     $("auth-error").textContent = "Network error connecting to server.";
@@ -66,6 +180,7 @@ $("logout-btn").onclick = () => {
   currentUser = null;
   $("app-screen").style.display = "none";
   $("auth-screen").style.display = "flex";
+  showToast("Logged out successfully.", "info");
 };
 
 function showApp(user) {
@@ -76,6 +191,10 @@ function showApp(user) {
   if (user.is_admin) {
     $("nav-admin").style.display = "inline-block";
   }
+  if ($("user-api-key-input")) {
+    $("user-api-key-input").value = user.api_key || "None";
+  }
+  applyTranslations();
 }
 
 async function boot() {
@@ -90,20 +209,66 @@ async function boot() {
 }
 function authHeaders() { return { "Authorization": "Bearer " + token }; }
 
-// ---------- navigation ----------
+// ---------- Navigation & Tabs ----------
 document.querySelectorAll(".nav-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-    btn.classList.add("active");
-    $("panel-" + btn.dataset.mode).classList.add("active");
-    if (btn.dataset.mode === "history") loadHistory();
-    if (btn.dataset.mode === "eval") loadEvalDashboard();
-    if (btn.dataset.mode === "admin") loadAdminDashboard();
-  };
+  btn.onclick = () => switchTab(btn.dataset.mode);
 });
 
-// ---------- UI Interactive Helpers ----------
+function switchTab(targetMode) {
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  
+  const targetBtn = document.querySelector(`.nav-btn[data-mode="${targetMode}"]`);
+  if (targetBtn) targetBtn.classList.add("active");
+  const panel = $("panel-" + targetMode);
+  if (panel) panel.classList.add("active");
+  
+  if (targetMode === "history") loadHistory();
+  if (targetMode === "eval") loadEvalDashboard();
+  if (targetMode === "admin") loadAdminDashboard();
+  if (targetMode === "settings") loadApiKey();
+}
+
+// ---------- Speech Voice Input (Web Speech API) ----------
+function startVoiceRecognition(inputId) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("Voice recognition is not supported in this browser.", "error");
+    return;
+  }
+  const btn = event.currentTarget;
+  btn.classList.add("listening");
+  showToast("Listening... Speak your claim now.", "info");
+  
+  const recognition = new SpeechRecognition();
+  recognition.lang = currentLanguage === "hi" ? "hi-IN" : "en-US";
+  recognition.interimResults = false;
+  
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    $(inputId).value = transcript;
+    updateCharCount(inputId, inputId === "claim-input" ? "claim-char-count" : "text-char-count", 10, 20000);
+    showToast("Voice captured successfully!", "info");
+  };
+  recognition.onerror = () => showToast("Could not recognize voice. Please try again.", "error");
+  recognition.onend = () => btn.classList.remove("listening");
+  recognition.start();
+}
+
+// ---------- Text-to-Speech Read Aloud ----------
+function readVerdictAloud(text) {
+  if (!('speechSynthesis' in window)) {
+    showToast("Text-to-speech not supported on this browser.", "error");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.0;
+  window.speechSynthesis.speak(utterance);
+  showToast("Playing audio summary...", "info");
+}
+
+// ---------- UI Helpers ----------
 function setButtonLoading(btn, loading, text) {
   if (loading) {
     btn.disabled = true;
@@ -172,7 +337,7 @@ function previewImage(file) {
   reader.readAsDataURL(file);
 }
 
-// ---------- verdict & rendering ----------
+// ---------- Verdict & Result Rendering ----------
 function verdictClass(v) {
   v = v.toLowerCase();
   if (v.includes("supported") || v.includes("human") || v.includes("real photo")) return "verdict-supported";
@@ -189,7 +354,12 @@ function stanceBadge(s) {
 
 function renderResult(el, data, withEvidence) {
   const pct = Math.round((data.confidence || 0) * 100);
-  let html = `<div class="verdict-card ${verdictClass(data.verdict)}">Verdict: ${data.verdict} (${pct}% confidence)</div>
+  activeShareVerdict = `VerifyEngine Verdict: ${data.verdict} (${pct}% confidence)`;
+  
+  let html = `<div class="verdict-card ${verdictClass(data.verdict)}">
+      Verdict: ${data.verdict} (${pct}% confidence)
+      <button class="btn-ghost small" style="float:right;" onclick="readVerdictAloud('Verdict is ${escapeHtml(data.verdict)} with ${pct} percent confidence.')">🔊 Listen</button>
+    </div>
     <div class="confidence-bar"><div class="confidence-fill" style="width:${pct}%"></div></div>`;
     
   // Sentence highlighting breakdown for text detection
@@ -222,7 +392,7 @@ function renderResult(el, data, withEvidence) {
     data.signals.map(s => `<li>${escapeHtml(s)}</li>`).join("") + "</ul>";
 
   if (withEvidence && data.evidence && data.evidence.length) {
-    html += "<strong>Retrieved Evidence & Stance:</strong>";
+    html += "<strong style='display:block; margin-top:12px;'>Retrieved Evidence & Stance:</strong>";
     data.evidence.forEach(ev => {
       html += `<div class="evidence-item">
         <h4>${stanceBadge(ev.stance)} ${escapeHtml(ev.title)}</h4>
@@ -232,9 +402,10 @@ function renderResult(el, data, withEvidence) {
     });
   }
 
-  // Export PDF Report Button
-  html += `<div style="margin-top:16px;">
-    <button class="btn-secondary" onclick="downloadPdfReport('${escapeHtml(data.analysis_type || 'verification')}', '${escapeHtml(data.verdict)}', ${pct})">📥 Download Verification Report (PDF)</button>
+  // Action Buttons: PDF Export & Share Modal
+  html += `<div style="margin-top:16px; display:flex; gap:10px;">
+    <button class="btn-secondary" onclick="downloadPdfReport('${escapeHtml(data.analysis_type || 'verification')}', '${escapeHtml(data.verdict)}', ${pct})">📥 Download PDF Report</button>
+    <button class="btn-primary" style="width:auto;" onclick="$('share-modal').style.display='flex'">🔗 Share Result</button>
   </div>`;
 
   el.innerHTML = html;
@@ -282,7 +453,7 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// ---------- API calls ----------
+// ---------- API Calls ----------
 async function submitClaim() {
   const btn = $("btn-verify-claim");
   const el = $("claim-result");
@@ -301,6 +472,7 @@ async function submitClaim() {
     const data = await res.json();
     if (!res.ok) { el.innerHTML = `<p class="error">${data.detail || "Error processing claim"}</p>`; return; }
     renderResult(el, data, true);
+    showToast("Claim verified successfully!", "info");
   } catch (e) {
     el.innerHTML = `<p class="error">Network error verifying claim.</p>`;
   } finally {
@@ -322,6 +494,7 @@ async function submitText() {
     const data = await res.json();
     if (!res.ok) { el.innerHTML = `<p class="error">${data.detail || "Error analysing text"}</p>`; return; }
     renderResult(el, data, false);
+    showToast("Text analysis complete!", "info");
   } catch (e) {
     el.innerHTML = `<p class="error">Network error analysing text.</p>`;
   } finally {
@@ -346,6 +519,7 @@ async function submitImage() {
     const data = await res.json();
     if (!res.ok) { el.innerHTML = `<p class="error">${data.detail || "Error analysing image"}</p>`; return; }
     renderResult(el, data, false);
+    showToast("Image forensics analysis complete!", "info");
   } catch (e) {
     el.innerHTML = `<p class="error">Network error analysing image.</p>`;
   } finally {
@@ -353,7 +527,104 @@ async function submitImage() {
   }
 }
 
-// ---------- History & Filters ----------
+// ---------- Batch CSV Processing ----------
+function handleBatchCsvSelect(e) {
+  if (e.target.files && e.target.files[0]) {
+    selectedBatchFile = e.target.files[0];
+    $("batch-file-name").textContent = `Selected: ${selectedBatchFile.name}`;
+  }
+}
+
+function downloadSampleCsv() {
+  const sampleContent = "claim\nWater boils at 100 degrees Celsius at sea level\nThe Earth orbits the Sun once per year\nHumans use 100 percent of their brains";
+  const blob = new Blob([sampleContent], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "sample_claims_template.csv";
+  a.click();
+  showToast("Sample CSV downloaded.", "info");
+}
+
+async function submitBatchClaims() {
+  if (!selectedBatchFile) {
+    showToast("Please upload a CSV file first.", "error");
+    return;
+  }
+  const btn = $("btn-process-batch");
+  const container = $("batch-results-container");
+  setButtonLoading(btn, true, "Processing Batch...");
+  
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const text = e.target.result;
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l && !l.toLowerCase().startsWith("claim"));
+    if (!lines.length) {
+      container.innerHTML = "<p class='error'>No valid claim rows found in CSV.</p>";
+      setButtonLoading(btn, false, "🚀 Verify All Claims");
+      return;
+    }
+    
+    try {
+      const res = await fetch("/api/verify-batch", {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ claims: lines })
+      });
+      const data = await res.json();
+      if (!res.ok) { container.innerHTML = `<p class="error">${data.detail || "Batch error"}</p>`; return; }
+      
+      let html = `<h4 style="margin-top:16px;">Batch Verification Results (${data.total_processed} Claims):</h4>
+        <table class="batch-table">
+          <thead><tr><th>#</th><th>Claim</th><th>Verdict</th><th>Confidence</th></tr></thead>
+          <tbody>`;
+      data.results.forEach((r, idx) => {
+        html += `<tr>
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(lines[idx] || '')}</td>
+          <td><span class="badge ${r.verdict.includes('SUPPORTED') ? 'badge-agrees' : 'badge-disagrees'}">${r.verdict}</span></td>
+          <td>${Math.round(r.confidence * 100)}%</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+      showToast(`Batch processing finished for ${data.total_processed} claims!`, "info");
+    } catch (err) {
+      container.innerHTML = "<p class='error'>Failed to process batch.</p>";
+    } finally {
+      setButtonLoading(btn, false, "🚀 Verify All Claims");
+    }
+  };
+  reader.readAsText(selectedBatchFile);
+}
+
+// ---------- API Key & Settings ----------
+async function loadApiKey() {
+  if (!currentUser) return;
+  if ($("user-api-key-input")) $("user-api-key-input").value = currentUser.api_key || "None";
+}
+
+function copyApiKey() {
+  const keyInput = $("user-api-key-input");
+  navigator.clipboard.writeText(keyInput.value);
+  showToast("API Key copied to clipboard!", "info");
+}
+
+async function regenerateApiKey() {
+  if (!confirm("Are you sure you want to generate a new API key? Existing integrations will stop working.")) return;
+  try {
+    const res = await fetch("/api/auth/api-key", { method: "POST", headers: authHeaders() });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser.api_key = data.api_key;
+      $("user-api-key-input").value = data.api_key;
+      showToast("New API Key generated successfully!", "info");
+    }
+  } catch (e) {
+    showToast("Failed to regenerate API key.", "error");
+  }
+}
+
+// ---------- History & Export ----------
 async function loadHistory() {
   const el = $("history-list");
   const typeFilter = $("history-filter-type").value;
@@ -372,10 +643,7 @@ async function loadHistory() {
     const res = await fetch(url, { headers: authHeaders() });
     const data = await res.json();
     if (!data.length) {
-      el.innerHTML = `
-        <div style="text-align:center; padding:30px;">
-          <p class="muted">No matching analysis history found.</p>
-        </div>`;
+      el.innerHTML = `<div style="text-align:center; padding:30px;"><p class="muted">No matching analysis history found.</p></div>`;
       return;
     }
     el.innerHTML = data.map(item => `
@@ -397,23 +665,23 @@ async function deleteHistoryEntry(event, id) {
   event.stopPropagation();
   if (!confirm("Are you sure you want to delete this analysis record?")) return;
   await fetch(`/api/history/${id}`, { method: "DELETE", headers: authHeaders() });
+  showToast("Record deleted.", "info");
   loadHistory();
 }
 
 function exportHistoryCsv() {
   window.open("/api/history/export/csv", "_blank");
+  showToast("Downloading CSV history export...", "info");
 }
 
 function showHistoryItem(item) {
   const target = $("panel-" + (item.analysis_type === "claim" ? "claim" : item.analysis_type));
-  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  target.classList.add("active");
+  switchTab(item.analysis_type === "claim" ? "claim" : item.analysis_type);
   renderResult(target.querySelector(".result"), item, item.analysis_type === "claim");
   target.scrollIntoView({ behavior: "smooth" });
 }
 
-// ---------- Benchmark & Admin Dashboards ----------
+// ---------- Chart.js Visual Dashboards ----------
 async function loadEvalDashboard() {
   const grid = $("eval-metrics-grid");
   const detailsBox = $("eval-details-box");
@@ -428,7 +696,7 @@ async function loadEvalDashboard() {
       <div class="stat-card"><div class="num">${Math.round(evalData.precision * 100)}%</div><div class="lbl">Precision</div></div>
       <div class="stat-card"><div class="num">${Math.round(evalData.recall * 100)}%</div><div class="lbl">Recall</div></div>
       <div class="stat-card"><div class="num">${Math.round(evalData.f1_score * 100)}%</div><div class="lbl">F1 Score</div></div>
-      <div class="stat-card"><div class="num">${evalData.dataset_size}</div><div class="lbl">Labeled Samples</div></div>
+      <div class="stat-card"><div class="num">${evalData.dataset_size}</div><div class="lbl">Benchmark Samples</div></div>
     `;
 
     detailsBox.innerHTML = `
@@ -438,9 +706,36 @@ async function loadEvalDashboard() {
       <p><strong>Confusion Matrix:</strong> True Negatives: ${evalData.confusion_matrix.true_negatives}, True Positives: ${evalData.confusion_matrix.true_positives}, False Positives: ${evalData.confusion_matrix.false_positives}, False Negatives: ${evalData.confusion_matrix.false_negatives}</p>
       <p class="small muted" style="margin-top:8px;">${evalData.comparison_summary}</p>
     `;
+
+    // Render Canvas Chart
+    renderEvalChart(evalData.accuracy, evalData.heuristic_baseline_accuracy, evalData.precision, evalData.recall);
   } catch (e) {
     grid.innerHTML = "<p class='error'>Failed to load benchmark evaluation.</p>";
   }
+}
+
+function renderEvalChart(mlAcc, heuristicAcc, precision, recall) {
+  const ctx = document.getElementById("chart-eval");
+  if (!ctx || typeof Chart === "undefined") return;
+  if (evalChartInstance) evalChartInstance.destroy();
+  
+  evalChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['ML Model Accuracy', 'Heuristic Baseline', 'Precision', 'Recall'],
+      datasets: [{
+        label: 'Performance Score (%)',
+        data: [Math.round(mlAcc * 100), Math.round(heuristicAcc * 100), Math.round(precision * 100), Math.round(recall * 100)],
+        backgroundColor: ['#1e3a8a', '#38bdf8', '#22c55e', '#eab308'],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
 }
 
 async function loadAdminDashboard() {
@@ -461,6 +756,8 @@ async function loadAdminDashboard() {
       <div class="stat-card"><div class="num">${stats.image_count}</div><div class="lbl">AI Image Checks</div></div>
     `;
 
+    renderAdminCharts(stats);
+
     const usersRes = await fetch("/api/admin/users", { headers: authHeaders() });
     if (usersRes.ok) {
       const users = await usersRes.json();
@@ -477,6 +774,97 @@ async function loadAdminDashboard() {
   } catch (e) {
     statsEl.innerHTML = "<p class='error'>Failed to load admin analytics.</p>";
   }
+}
+
+function renderAdminCharts(stats) {
+  const pieCtx = document.getElementById("chart-admin-pie");
+  const barCtx = document.getElementById("chart-admin-bar");
+  if (typeof Chart === "undefined") return;
+  
+  if (pieCtx) {
+    if (adminPieChartInstance) adminPieChartInstance.destroy();
+    adminPieChartInstance = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Claims', 'AI Text', 'AI Image'],
+        datasets: [{
+          data: [stats.claim_count, stats.text_count, stats.image_count],
+          backgroundColor: ['#1e3a8a', '#0284c7', '#38bdf8']
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  if (barCtx) {
+    if (adminBarChartInstance) adminBarChartInstance.destroy();
+    adminBarChartInstance = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Users', 'Total Analyses'],
+        datasets: [{
+          label: 'Platform Totals',
+          data: [stats.total_users, stats.total_analyses],
+          backgroundColor: ['#22c55e', '#1e3a8a'],
+          borderRadius: 6
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+  }
+}
+
+// ---------- Command Palette & Modal Shortcuts ----------
+function toggleCmdPalette() {
+  const modal = $("cmd-modal");
+  const isHidden = modal.style.display === "none";
+  modal.style.display = isHidden ? "flex" : "none";
+  if (isHidden) $("cmd-input").focus();
+}
+
+function closeCmdPalette(e) {
+  $("cmd-modal").style.display = "none";
+}
+
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    toggleCmdPalette();
+  }
+  if (e.key === "Escape") {
+    $("cmd-modal").style.display = "none";
+    $("share-modal").style.display = "none";
+  }
+});
+
+function filterCmdOptions() {
+  const q = $("cmd-input").value.toLowerCase();
+  document.querySelectorAll(".cmd-item").forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(q) ? "flex" : "none";
+  });
+}
+
+function execCmd(command) {
+  closeCmdPalette();
+  if (command === "theme") themeBtn.click();
+  else if (command === "lang") toggleLanguage();
+  else switchTab(command);
+}
+
+// ---------- Share Result Handler ----------
+function shareSocial(platform) {
+  const shareText = encodeURIComponent(activeShareVerdict || "Check out VerifyEngine AI Claim Verification!");
+  const url = encodeURIComponent(window.location.origin);
+  
+  if (platform === "whatsapp") window.open(`https://api.whatsapp.com/send?text=${shareText}%20${url}`, "_blank");
+  if (platform === "twitter") window.open(`https://twitter.com/intent/tweet?text=${shareText}&url=${url}`, "_blank");
+  if (platform === "linkedin") window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, "_blank");
+}
+
+function copyShareLink() {
+  navigator.clipboard.writeText(window.location.href);
+  showToast("Share link copied to clipboard!", "info");
+  $("share-modal").style.display = "none";
 }
 
 boot();

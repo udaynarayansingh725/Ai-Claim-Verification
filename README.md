@@ -7,6 +7,8 @@ Combines three verification & detection tools in one modern web app:
 
 > Gives a **first-level, understandable assessment** — not a replacement for expert human fact-checking.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/udaynarayansingh725/Ai-Claim-Verification)
+
 ---
 
 ## Tech Stack

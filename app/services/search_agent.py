@@ -10,7 +10,7 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-tavily_client = AsyncTavilyClient(api_key=settings.TAVILY_API_KEY)
+tavily_client = AsyncTavilyClient(api_key=settings.TAVILY_API_KEY or "dummy_key")
 search_semaphore = asyncio.Semaphore(3)
 
 AUTHORITATIVE_DOMAINS = ["wikipedia.org", "reuters.com", "bbc.com", "apnews.com", ".gov", ".edu"]

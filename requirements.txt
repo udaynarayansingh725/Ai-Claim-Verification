@@ -17,3 +17,4 @@ pdf2image
 Pillow
 python-multipart
 greenlet
+aiosqlite

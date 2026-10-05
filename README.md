@@ -1,94 +1,267 @@
-# Claim Verification & AI-Generated Content Detection Engine
+# 🔍 Factify Backend
 
-[![Build Status](https://github.com/udaynarayansingh725/Ai-Claim-Verification/actions/workflows/ci.yml/badge.svg)](https://github.com/udaynarayansingh725/Ai-Claim-Verification/actions)
-[![Live Web Application](https://img.shields.io/badge/Live_Demo-https%3A%2F%2Fai--claim--verification.onrender.com-brightgreen?style=for-the-badge&logo=render)](https://ai-claim-verification.onrender.com/)
+Factify is an open-source, highly concurrent AI fact-checking pipeline and fake-content detection backend system. 
 
-🌐 **Live Demo Application:** [https://ai-claim-verification.onrender.com/](https://ai-claim-verification.onrender.com/)  
-📚 **Interactive Swagger API Docs:** [https://ai-claim-verification.onrender.com/docs](https://ai-claim-verification.onrender.com/docs)
+## 🚀 What it is and What it does
 
-Combines five advanced verification & analytics engines in one modern web application:
-1. **Claim Verification** — claim → keywords extraction → evidence retrieval → stance classification (`AGREES`, `DISAGREES`, `NEUTRAL`) → verdict.
-2. **URL Article Verification** — URL extraction → article body parsing → automated claim checking.
-3. **AI Text Detection** — likelihood score with sentence-by-sentence highlight breakdown (burstiness, lexical diversity, repetition, connectives).
-4. **AI Image Forensics** — likelihood score with interactive visual **Error Level Analysis (ELA) Heatmap** canvas & FFT frequency spectrum.
-5. **ML Benchmark Evaluation & Analytics** — 50+ labeled benchmark sample evaluation comparing scikit-learn Logistic Regression vs Heuristic rules.
+Factify provides a robust backend to instantly analyze text, links, documents, and images to determine their factual accuracy and authenticity. 
 
-> ⓘ **Note on Probabilistic Nature:** Results are probabilistic first-level assessments based on signal extraction and evidence retrieval — not a replacement for expert human fact-checking.
+### Key Features
+- **Fact-Checking Pipeline (WebSocket):** Built for real-time streaming, the core pipeline can take a piece of content (or URL), scrape it, extract claims using LLMs, search the web concurrently for evidence, and evaluate each claim's truthfulness, streaming the progress back to the user instantly.
+- **AI Content Detection (REST):** Dedicated endpoints to detect whether Texts, PDFs, or Images have been synthetically generated or altered by AI.
+- **Async & Multi-threaded:** Uses `asyncio` and thread pools in Python to handle intensive blocking tasks (like web scraping and search) so that the application maintains high throughput.
+
+## 🛠️ How it works
+
+The Factify backend is built with:
+- **FastAPI** for high-performance REST and WebSocket routing.
+- **Google Gemini API** for LLM-based claim extraction, fake-content detection, and verifying factualness.
+- **Web Search Agents** (DuckDuckGo / Tavily) to pull real-time evidence safely.
+- **PostgreSQL** paired with async SQLAlchemy / Alembic for safely storing fact-check reports asynchronously.
 
 ---
 
-## 🏗️ Architecture Diagram
+## ⚙️ Setup Guide
+
+### 1. Prerequisites
+- Python 3.10+
+- PostgreSQL server running locally or externally.
+
+### 2. Environment Variables (`.env`)
+Create a `.env` file in the root directory and add the following required variables:
+
+```env
+# Google Gemini API key for claim extraction and AI detection
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Tavily API key for robust web search
+TAVILY_API_KEY=your_tavily_api_key_here
+
+# PostgreSQL database connection string (asyncpg format)
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/factify
+
+# Application settings
+LOG_LEVEL=DEBUG
+APP_ENV=development
+```
+
+### 3. Installation
+Clone the repository and install the required dependencies:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/factify.git
+cd factify
+
+# Create and activate a virtual environment
+python -m venv venv
+
+# On Windows
+venv\Scripts\activate
+# On Mac/Linux
+source venv/bin/activate
+
+# Install the Python dependencies
+pip install -r requirements.txt
+```
+
+### 4. Database Setup (Docker)
+The easiest way to run the required PostgreSQL database is via the included Docker Compose configuration. Ensure you have Docker installed and run:
+
+```bash
+docker-compose up -d db
+```
+This will start the postgres server automatically.
+
+### 5. Database Migrations
+Run Alembic upgrades to set up the data tables:
+
+```bash
+alembic upgrade head
+```
+
+### 6. Running the Application
+Start the FastAPI server via Uvicorn:
+
+```bash
+fastapi run app/main.py
+# Or run with uvicorn directly
+uvicorn app.main:app --reload
+```
+
+The API will be accessible at `http://127.0.0.1:8000`. 
+Check out the auto-generated API docs at `http://127.0.0.1:8000/docs`.
+
+---
+
+## 🏗️ System Architecture & Flow Diagrams
+
+*Note: The system architectures below are built using Mermaid. If your markdown reader doesn't support them natively, you can view them seamlessly by opening this file on GitHub.*
+
+### 1. High-Level Architecture
+This demonstrates how the internal applications, databases, and external APIs communicate with each other.
+
+```mermaid
+graph TD
+    Client((Client / Browser)) <-->|WebSocket| WS[WebSocket Endpoint <br> /ws/verify]
+    Client <-->|REST HTTP| REST[REST Endpoints <br> /detect/*]
+    
+    subgraph FastAPI Backend
+        WS -.-> PipelineService[Fact-Checking Pipeline]
+        REST -.-> ValidationLayer[Validation Utils]
+        ValidationLayer -.-> AIDetectors[AI Detectors <br> Text, PDF, Image]
+        PipelineService -.-> ScraperLayer[Scraping Service]
+        PipelineService -.-> FactCheckServices[Claim Extraction <br> Search, Verification]
+    end
+    
+    subgraph Databases
+        PipelineService -->|Save Reports <br> AsyncSession| Postgres[(PostgreSQL Database)]
+    end
+
+    subgraph External APIs
+        AIDetectors <-->|async calls| GeminiAPI[Google Gemini API]
+        FactCheckServices <-->|async calls| GeminiAPI
+        FactCheckServices <-->|async calls| SearchAPI[DuckDuckGo or Tavily Search API]
+        ScraperLayer <-->|HTTP Requests| TargetSites[Target Websites]
+    end
+```
+
+### 2. WebSocket Fact-Checking Pipeline (Async & Multi-threading)
+The core flow of the `/ws/verify` endpoint.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend Client
+    participant WS as WebSocket Router
+    participant Pipe as Pipeline Service
+    participant Scrape as Scraper
+    participant AI as AI Detector
+    participant LLM as Claims/Verify LLM
+    participant Search as Search Agent
+    participant DB as PostgreSQL
+
+    FE->>WS: Connect: wss://.../ws/verify
+    WS-->>FE: Accept Connection
+    FE->>WS: Send JSON payload
+    WS->>Pipe: run_pipeline(content)
+    
+    rect rgb(30, 30, 50)
+    Note right of Pipe: Stage 1: Scraping (Threaded)
+    Pipe-->>FE: emit stage: scraping
+    alt content is URL
+        Pipe->>Scrape: asyncio.to_thread(scrape_content)
+        Note right of Scrape: Runs blocking I/O<br/>in a separate background thread
+        Scrape-->>Pipe: text content
+    end
+    end
+
+    rect rgb(50, 40, 30)
+    Note right of Pipe: Stage 2: Parallel Tasks initiation
+    Pipe-->>FE: emit stage: extracting
+    Pipe->>AI: asyncio.create_task(detect_ai)
+    Note right of AI: AI Detection runs<br/>concurrently in the background
+    end
+
+    rect rgb(30, 50, 40)
+    Note right of Pipe: Stage 3: Extract & Process Claims
+    Pipe->>LLM: extract_claims(text)
+    LLM-->>Pipe: list of claims
+    loop For each claim
+        Pipe-->>FE: emit claim_found event
+    end
+    
+    Pipe-->>FE: emit stage: searching
+    Note right of Pipe: Gather all claims and<br/>process them SIMULTANEOUSLY
+    par Process Claim 1
+        Pipe->>Search: search_for_claim()
+        Search-->>Pipe: query, sources
+        Pipe-->>FE: emit search_done event
+        Pipe->>LLM: verify_claim()
+        LLM-->>Pipe: validation verdict
+        Pipe-->>FE: emit claim_verified event
+    and Process Claim N
+        Pipe->>Search: Search for claim query
+        Pipe->>LLM: Verify claim
+    end
+    end
+
+    rect rgb(50, 30, 50)
+    Note right of Pipe: Stage 4: Compilation & Database
+    Pipe-->>AI: await background AI task
+    AI-->>Pipe: ai_probability
+    Pipe->>DB: save_report(results, ai_prob)
+    DB-->>Pipe: report_id
+    Pipe-->>FE: emit report_done event
+    end
+
+    opt On Any Exception
+        Pipe-->>FE: emit error event
+    end
+```
+
+### 3. Dedicated AI Detection Endpoints (REST Flow)
 
 ```mermaid
 flowchart TD
-    User["👤 User / Chrome Extension / API Client"] -->|HTTP / REST| FastAPI["⚡ FastAPI Gateway"]
-    FastAPI --> Auth["🔒 Security & Auth (JWT / API Key)"]
+    Req[Client Request] --> Router{Endpoint}
+
+    Router -->|POST /detect/text| TextStart[validate_text]
+    Router -->|POST /detect/image| ImgStart[validate_image_file]
+    Router -->|POST /detect/pdf| PdfStart[validate_pdf_file]
+
+    TextStart --> DetectText[detect_text_content]
     
-    subgraph Services["Engine Services Layer"]
-        Auth --> ClaimEngine["🔍 Claim Service (TF-IDF / Stance)"]
-        Auth --> TextEngine["🤖 AI Text Service (Burstiness / Sentences)"]
-        Auth --> ImageEngine["🖼️ Image AI Service (ELA / FFT Spectrum)"]
-        Auth --> URLEngine["🌐 URL Extractor Service"]
-        Auth --> MLEngine["📊 ML Evaluation Service (Scikit-Learn)"]
-    end
+    ImgStart --> ImgCheck[PIL Image Verify <br> Check for Corruption]
+    ImgCheck -->|Valid| DetectImg[detect_image_content]
+    ImgCheck -->|Corrupt| HTTP422[HTTP 422 Error]
     
-    ClaimEngine -->|Live Query| NewsAPI["📰 NewsAPI / Knowledge Base"]
-    Services --> DB["🗄️ Database (SQLite / PostgreSQL)"]
+    PdfStart --> DetectPdf[detect_pdf_content]
+
+    DetectText --> GeminiCall[Call Gemini AI Prompt]
+    DetectImg --> GeminiCall
+    DetectPdf --> GeminiCall
+
+    GeminiCall --> ParseJSON[Parse LLM JSON Response]
+    ParseJSON --> ReturnModel[Return DetectionResult Schema]
+    ReturnModel --> Res[Client Response HTTP 200]
+```
+
+### 4. WebSocket Error & Event Architecture
+
+```mermaid
+stateDiagram-v2
+    [*] --> ConnectionAttempt: Client requests WS Protocol
+    ConnectionAttempt --> Rejected: Duplicate Session ID
+    ConnectionAttempt --> Connected: Session Unique
+
+    state Rejected {
+        [*] --> EmitDuplicateError: emit error event
+        EmitDuplicateError --> CloseWS
+    }
+
+    state Connected {
+        [*] --> WaitingForPayload
+        WaitingForPayload --> ParsingJSON: Receive data
+        ParsingJSON --> InvalidJSON: Fallback to raw text
+        ParsingJSON --> ValidatedPayload: Extracted payload
+        
+        ValidatedPayload --> PipelineExecution: triggers run_pipeline
+        InvalidJSON --> PipelineExecution
+        
+        state PipelineExecution {
+           [*] --> EmittingEvents
+           EmittingEvents --> SendingUpdates: Emit stage updates
+           SendingUpdates --> Done: Emit report_done event
+           EmittingEvents --> CatchException: Any unhandled exception
+           CatchException --> EmitPipelineError: Emit error event
+        }
+    }
+
+    Connected --> Disconnected: Client disconnects
+    Disconnected --> [*]
 ```
 
 ---
 
-## ⚡ API Quickstart & `curl` Examples
-
-### 1. Verify a Factual Claim
-```bash
-curl -X POST "https://ai-claim-verification.onrender.com/api/verify-claim" \
-     -H "Content-Type: application/json" \
-     -d '{"claim": "Water boils at 100 degrees Celsius at sea level"}'
-```
-
-### 2. Detect AI-Generated Text
-```bash
-curl -X POST "https://ai-claim-verification.onrender.com/api/detect-text" \
-     -H "Content-Type: application/json" \
-     -d '{"text": "In today digital age, it is important to note that technology plays a crucial role. Furthermore, innovation drives progress."}'
-```
-
-### 3. Check System Health & Uptime
-```bash
-curl "https://ai-claim-verification.onrender.com/api/health"
-```
-
----
-
-## 🧩 Chrome Extension (Manifest V3)
-
-The repository includes a complete **Chrome Extension** in the `chrome-extension/` folder.
-
-### Installation Instructions:
-1. Open Google Chrome and navigate to `chrome://extensions/`.
-2. Enable **Developer mode** in the top-right toggle.
-3. Click **Load unpacked** and select the [`chrome-extension`](chrome-extension/) folder.
-4. Highlight any text on any webpage, right-click, and choose **"🔍 Verify Claim with VerifyEngine"**!
-
----
-
-## 🐳 Docker & Docker Compose Deployment
-
-Run the full production stack (FastAPI + PostgreSQL + Redis):
-```bash
-docker-compose up --build -d
-```
-App will be running at `http://localhost:8000`.
-
----
-
-## ⚠️ Render Cold-Start Note
-When using the free tier of Render, services spin down after periods of inactivity. If the service hasn't received traffic recently, the initial HTTP request may take **30-50 seconds** while the instance spins up. Subsequent requests respond instantly.
-
----
-
-## 👨‍💻 Developer & Author
-* **GitHub Profile:** [udaynarayansingh725](https://github.com/udaynarayansingh725)
-* **Project Repository:** [Ai-Claim-Verification](https://github.com/udaynarayansingh725/Ai-Claim-Verification)
-* **License:** MIT License
+## 🤝 Open Source Details
+Factify is completely open source! Feel free to raise issues, submit PRs, and help build a faster, stronger fake-content detection utility. We welcome contributions from the community.

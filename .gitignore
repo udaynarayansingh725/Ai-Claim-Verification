@@ -3,34 +3,29 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Environment variables & secrets
-.env
-
-# SQLite databases
-app.db
-*.sqlite3
-*.db
-
 # Virtual environments
 venv/
-.venv/
 env/
 ENV/
+env.bak/
+venv.bak/
 
-# Testing & caches
-.pytest_cache/
-.coverage
-htmlcov/
-
-# IDE & Editor files
-.vscode/
+# IDEs and Editors
 .idea/
+.vscode/
 *.swp
 *.swo
-
-# OS files
+*~
 .DS_Store
-Thumbs.db
 
-# Temporary subfolders
-factify-backend-main/
+# Environment variables (Crucial!)
+.env
+
+# Logs and databases
+logs/
+*.log
+*.sqlite
+*.sqlite3
+
+# FastAPI / General
+*.pid

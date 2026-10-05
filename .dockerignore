@@ -1,7 +1,0 @@
-__pycache__
-*.pyc
-.env
-app.db
-*.sqlite3
-.pytest_cache
-.git

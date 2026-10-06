@@ -21,6 +21,8 @@ def is_authoritative(url: str) -> bool:
             return True
     return False
 
+from app.utils.gemini_client import generate_content_with_fallback
+
 async def generate_query(claim: str, api_key: str = None) -> str:
     prompt = SEARCH_QUERY_PROMPT.format(claim=claim)
     key_to_use = api_key or settings.GEMINI_API_KEY
@@ -28,10 +30,7 @@ async def generate_query(claim: str, api_key: str = None) -> str:
         return claim[:60]
     client = genai.Client(api_key=key_to_use)
     try:
-        response = await client.aio.models.generate_content(
-            model='gemini-3.8-flash',
-            contents=prompt
-        )
+        response = await generate_content_with_fallback(client, contents=prompt, preferred_model='gemini-2.0-flash')
         query = response.text.strip()
         logger.debug(f"Generated search query: '{query}' for claim: '{claim[:50]}...'")
         return query

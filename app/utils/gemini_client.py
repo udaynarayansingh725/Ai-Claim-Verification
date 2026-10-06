@@ -5,7 +5,7 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-CANDIDATE_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-3.8-flash']
+CANDIDATE_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite']
 
 async def generate_content_with_fallback(client: genai.Client, contents, config=None, preferred_model: str = None):
     models_to_try = list(CANDIDATE_MODELS)
@@ -31,9 +31,10 @@ async def generate_content_with_fallback(client: genai.Client, contents, config=
                 err_str = str(e)
                 last_exception = e
                 # Check for 503 UNAVAILABLE or 429 RESOURCE_EXHAUSTED or high demand
-                if any(k in err_str for k in ["503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "high demand"]):
-                    logger.warning(f"Gemini API model '{model_name}' high demand/unavailable ({err_str[:100]}...). Retrying...")
-                    await asyncio.sleep(1)
+                if any(k in err_str for k in ["503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "high demand", "Quota"]):
+                    backoff_delay = 1.5 * (attempt + 1)
+                    logger.warning(f"Gemini API model '{model_name}' rate limited/unavailable ({err_str[:100]}...). Sleeping {backoff_delay}s...")
+                    await asyncio.sleep(backoff_delay)
                     continue
                 else:
                     logger.warning(f"Gemini API model '{model_name}' returned error: {err_str[:100]}. Trying next model...")
@@ -65,8 +66,8 @@ def generate_content_sync_with_fallback(client: genai.Client, contents, config=N
             except Exception as e:
                 err_str = str(e)
                 last_exception = e
-                if any(k in err_str for k in ["503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "high demand"]):
-                    time.sleep(1)
+                if any(k in err_str for k in ["503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "high demand", "Quota"]):
+                    time.sleep(1.5 * (attempt + 1))
                     continue
                 else:
                     break

@@ -29,7 +29,7 @@ async def generate_query(claim: str, api_key: str = None) -> str:
     client = genai.Client(api_key=key_to_use)
     try:
         response = await client.aio.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt
         )
         query = response.text.strip()

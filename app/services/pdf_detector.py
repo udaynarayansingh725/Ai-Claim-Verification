@@ -83,7 +83,7 @@ async def detect_pdf_content(pdf_bytes: bytes, api_key: str) -> dict:
             logger.debug(f"Calling Gemini API (attempt {attempt+1}/3)")
             def make_call():
                 return client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.8-flash',
                     contents=[user_prompt],
                     config=genai.types.GenerateContentConfig(
                         system_instruction=system_prompt,

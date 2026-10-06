@@ -31,7 +31,7 @@ async def _verify_with_prompt(prompt: str, api_key: str = None) -> Dict[str, Any
     client = genai.Client(api_key=key_to_use)
     try:
         response = await client.aio.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt
         )
         text = clean_json_response(response.text)
@@ -39,7 +39,7 @@ async def _verify_with_prompt(prompt: str, api_key: str = None) -> Dict[str, Any
     except Exception as e:
         logger.warning(f"Initial verification generation failed, retrying... Error: {str(e)}")
         response = await client.aio.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt
         )
         text = clean_json_response(response.text)

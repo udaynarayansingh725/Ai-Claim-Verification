@@ -24,7 +24,7 @@ async def extract_claims(text: str, api_key: str = None) -> list[str]:
     
     try:
         response = await client.aio.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt
         )
     except Exception as e:
@@ -41,7 +41,7 @@ async def extract_claims(text: str, api_key: str = None) -> list[str]:
         # Retry once
         try:
             response = await client.aio.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.8-flash',
                 contents=prompt
             )
             response_text = clean_json_response(response.text)

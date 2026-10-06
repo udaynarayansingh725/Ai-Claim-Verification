@@ -1,10 +1,10 @@
-# 🔍 Factify Backend
+# 🔍 AI GENERATED CONTENT DETECTION ENGINE
 
-Factify is an open-source, highly concurrent AI fact-checking pipeline and fake-content detection backend system. 
+AI GENERATED CONTENT DETECTION ENGINE is an open-source, highly concurrent AI fact-checking pipeline and fake-content detection backend system. 
 
 ## 🚀 What it is and What it does
 
-Factify provides a robust backend to instantly analyze text, links, documents, and images to determine their factual accuracy and authenticity. 
+This engine provides a robust backend to instantly analyze text, links, documents, and images to determine their factual accuracy and authenticity. 
 
 ### Key Features
 - **Fact-Checking Pipeline (WebSocket):** Built for real-time streaming, the core pipeline can take a piece of content (or URL), scrape it, extract claims using LLMs, search the web concurrently for evidence, and evaluate each claim's truthfulness, streaming the progress back to the user instantly.
@@ -13,7 +13,7 @@ Factify provides a robust backend to instantly analyze text, links, documents, a
 
 ## 🛠️ How it works
 
-The Factify backend is built with:
+The backend is built with:
 - **FastAPI** for high-performance REST and WebSocket routing.
 - **Google Gemini API** for LLM-based claim extraction, fake-content detection, and verifying factualness.
 - **Web Search Agents** (DuckDuckGo / Tavily) to pull real-time evidence safely.

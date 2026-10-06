@@ -15,7 +15,7 @@ async def lifespan(app: FastAPI):
     setup_logging()
     yield
 
-app = FastAPI(title="Factify API", lifespan=lifespan)
+app = FastAPI(title="AI GENERATED CONTENT DETECTION ENGINE API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,7 +34,7 @@ async def serve_frontend():
     index_path = os.path.join(static_dir, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return {"message": "Factify API is running"}
+    return {"message": "AI GENERATED CONTENT DETECTION ENGINE API is running"}
 
 app.include_router(ws_router)
 app.include_router(reports_router, tags=["Reports"])

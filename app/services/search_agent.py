@@ -1,6 +1,5 @@
 import asyncio
 from typing import List, Dict, Any, Tuple
-from tavily import AsyncTavilyClient
 from duckduckgo_search import DDGS
 from app.core.config import settings
 from app.core.prompts import SEARCH_QUERY_PROMPT
@@ -10,7 +9,6 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-tavily_client = AsyncTavilyClient(api_key=settings.TAVILY_API_KEY or "dummy_key")
 search_semaphore = asyncio.Semaphore(3)
 
 AUTHORITATIVE_DOMAINS = ["wikipedia.org", "reuters.com", "bbc.com", "apnews.com", ".gov", ".edu"]
@@ -26,6 +24,8 @@ def is_authoritative(url: str) -> bool:
 async def generate_query(claim: str, api_key: str = None) -> str:
     prompt = SEARCH_QUERY_PROMPT.format(claim=claim)
     key_to_use = api_key or settings.GEMINI_API_KEY
+    if not key_to_use:
+        return claim[:60]
     client = genai.Client(api_key=key_to_use)
     try:
         response = await client.aio.models.generate_content(
@@ -40,7 +40,12 @@ async def generate_query(claim: str, api_key: str = None) -> str:
         return claim[:60]
 
 async def tavily_search(query: str) -> List[Dict[str, Any]]:
+    key = settings.TAVILY_API_KEY
+    if not key:
+        raise RuntimeError("No Tavily API key configured")
     try:
+        from tavily import AsyncTavilyClient
+        tavily_client = AsyncTavilyClient(api_key=key)
         logger.info(f"Executing Tavily search for: '{query}'")
         response = await tavily_client.search(
             query=query, 
@@ -64,16 +69,8 @@ async def tavily_search(query: str) -> List[Dict[str, Any]]:
                     pass
         return results
     except Exception as e:
-        if "429" in str(e):
-            logger.warning("Tavily rate limit hit. Sleeping and retrying...")
-            await asyncio.sleep(2)
-            try:
-                response = await tavily_client.search(query=query, search_depth="basic", max_results=3)
-                return response.get("results", [])
-            except Exception:
-                pass
-        logger.error(f"Tavily search failed entirely: {str(e)}")
-        raise RuntimeError("Tavily failed")
+        logger.warning(f"Tavily search unavailable: {str(e)}")
+        raise RuntimeError(f"Tavily search failed: {str(e)}")
 
 async def duckduckgo_search(query: str) -> List[Dict[str, Any]]:
     logger.info(f"Executing DuckDuckGo fallback search for: '{query}'")
@@ -90,13 +87,15 @@ async def duckduckgo_search(query: str) -> List[Dict[str, Any]]:
                 })
             return results
         return await asyncio.to_thread(do_search)
-    except Exception:
+    except Exception as e:
+        logger.error(f"DuckDuckGo search error: {str(e)}")
         return []
 
 async def search_for_claim(claim: str, api_key: str = None) -> Tuple[str, List[Dict[str, str]]]:
     async with search_semaphore:
         query = await generate_query(claim, api_key)
         
+        results = []
         try:
             results = await tavily_search(query)
         except Exception:

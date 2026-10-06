@@ -13,6 +13,7 @@ from app.services.text_detector import parse_confidence
 from app.services.image_detector import detect_image_content
 from app.core.prompts import PDF_DETECTION_SYSTEM_PROMPT, PDF_DETECTION_USER_PROMPT
 from app.core.logger import get_logger
+from app.utils.gemini_client import generate_content_sync_with_fallback
 
 logger = get_logger(__name__)
 
@@ -55,7 +56,6 @@ async def detect_pdf_content(pdf_bytes: bytes, api_key: str) -> dict:
         
     if not extracted_text:
         logger.info("No text extracted from PDF. Falling back to image detection for the first page.")
-        # Fallback to image detection for the first page
         try:
             images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1)
             if not images:
@@ -65,58 +65,44 @@ async def detect_pdf_content(pdf_bytes: bytes, api_key: str) -> dict:
             images[0].save(img_byte_arr, format='JPEG')
             img_bytes = img_byte_arr.getvalue()
             
-            # Delegate to image detector
             return await detect_image_content(img_bytes, api_key)
         except Exception as e:
             logger.error(f"PDF-to-image conversion failed: {e}")
             raise HTTPException(status_code=422, detail="Could not read file. It may be corrupted.")
 
-    extracted_text = extracted_text[:8000] # Take first 8000 chars
-    
+    extracted_text = extracted_text[:8000]
     client = genai.Client(api_key=api_key)
     
     system_prompt = PDF_DETECTION_SYSTEM_PROMPT
     user_prompt = PDF_DETECTION_USER_PROMPT.format(text=extracted_text)
 
-    for attempt in range(3):
-        try:
-            logger.debug(f"Calling Gemini API (attempt {attempt+1}/3)")
-            def make_call():
-                return client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=[user_prompt],
-                    config=genai.types.GenerateContentConfig(
-                        system_instruction=system_prompt,
-                        temperature=0.1,
-                        response_mime_type="application/json"
-                    )
-                )
+    try:
+        def make_call():
+            config = genai.types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.1,
+                response_mime_type="application/json"
+            )
+            return generate_content_sync_with_fallback(client, contents=[user_prompt], config=config, preferred_model='gemini-2.0-flash')
 
-            response = await asyncio.to_thread(make_call)
-            
-            data = json.loads(response.text)
-            prob = float(data.get("ai_probability", 0.0))
-            
-            processing_time = int((time.time() - start_time) * 1000)
-            logger.info(f"PDF detection complete in {processing_time}ms: {prob} probability")
-            return {
-                "result": parse_confidence(prob),
-                "confidence": prob,
-                "signals": data.get("signals_detected", []),
-                "processing_time_ms": processing_time
-            }
-            
-        except Exception as e:
-            logger.error(f"Gemini API error (pdf, attempt {attempt+1}): {e}\n{traceback.format_exc()}")
-            if attempt == 2:
-                break
-            await asyncio.sleep(1)
-
-    logger.warning("PDF detection failed after 3 attempts")
-    processing_time = int((time.time() - start_time) * 1000)
-    return {
-        "result": "uncertain",
-        "confidence": 0.5,
-        "signals": ["detection unavailable, please retry"],
-        "processing_time_ms": processing_time
-    }
+        response = await asyncio.to_thread(make_call)
+        data = json.loads(response.text)
+        prob = float(data.get("ai_probability", 0.0))
+        
+        processing_time = int((time.time() - start_time) * 1000)
+        logger.info(f"PDF detection complete in {processing_time}ms: {prob} probability")
+        return {
+            "result": parse_confidence(prob),
+            "confidence": prob,
+            "signals": data.get("signals_detected", []),
+            "processing_time_ms": processing_time
+        }
+    except Exception as e:
+        logger.error(f"PDF detection failed: {e}\n{traceback.format_exc()}")
+        processing_time = int((time.time() - start_time) * 1000)
+        return {
+            "result": "uncertain",
+            "confidence": 0.5,
+            "signals": [f"PDF detection unavailable: {str(e)[:100]}"],
+            "processing_time_ms": processing_time
+        }

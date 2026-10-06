@@ -27,7 +27,7 @@ async def detect_image_content(image_bytes: bytes, api_key: str) -> dict:
             logger.debug(f"Calling Gemini API (attempt {attempt+1}/3)")
             def make_call():
                 return client.models.generate_content(
-                    model='gemini-2.5-flash-lite',
+                    model='gemini-2.5-flash',
                     contents=[
                         genai.types.Part.from_bytes(data=image_bytes, mime_type=mime),
                         user_prompt

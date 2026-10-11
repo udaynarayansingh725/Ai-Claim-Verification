@@ -110,12 +110,14 @@ def build_evidence_block(sources: List[Dict[str, str]]) -> str:
         parts.append(f"[Source {i}] {title}\nURL: {url}\nExcerpt: {content}\n")
     return "\n".join(parts)
 
-async def _verify_with_prompt(prompt: str, api_key: str = None) -> Dict[str, Any]:
-    key_to_use = api_key or settings.GEMINI_API_KEY
-    if not key_to_use:
-        return {"verdict": "Unverifiable", "confidence": 0.5, "reasoning": "No API key configured", "conflicting_sources": False}
+from app.utils.validators import is_valid_api_key
 
-    client = genai.Client(api_key=key_to_use)
+async def _verify_with_prompt(prompt: str, api_key: str = None) -> Dict[str, Any]:
+    key_to_use = api_key if is_valid_api_key(api_key) else settings.GEMINI_API_KEY
+    if not is_valid_api_key(key_to_use):
+        raise ValueError("No valid API key configured")
+
+    client = genai.Client(api_key=key_to_use.strip())
     response = await generate_content_with_fallback(client, contents=prompt, preferred_model='gemini-2.0-flash')
     text = clean_json_response(response.text)
     return json.loads(text)

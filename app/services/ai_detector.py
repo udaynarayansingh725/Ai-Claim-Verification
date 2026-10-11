@@ -5,6 +5,7 @@ from app.core.prompts import AI_DETECTION_PROMPT
 from typing import Dict, Any
 from app.core.logger import get_logger
 from app.utils.gemini_client import generate_content_with_fallback
+from app.services.heuristics import analyze_text_heuristics
 
 logger = get_logger(__name__)
 
@@ -21,10 +22,15 @@ def clean_json_response(text: str) -> str:
 async def detect_ai(text: str, api_key: str = None) -> Dict[str, Any]:
     prompt = AI_DETECTION_PROMPT.format(text=text[:3000])
     key_to_use = api_key or settings.GEMINI_API_KEY
-    if not key_to_use:
-        return {"ai_probability": 0.0, "signals_detected": ["No API key provided"], "confidence": "low"}
+    if not key_to_use or key_to_use.strip() in ["demo_key", "undefined", "null", "none", ""]:
+        res = analyze_text_heuristics(text)
+        return {
+            "ai_probability": res["ai_probability"],
+            "signals_detected": res["signals"],
+            "confidence": "high" if (res["ai_probability"] > 0.65 or res["ai_probability"] < 0.35) else "medium"
+        }
         
-    client = genai.Client(api_key=key_to_use)
+    client = genai.Client(api_key=key_to_use.strip())
     
     try:
         response = await generate_content_with_fallback(client, contents=prompt, preferred_model='gemini-2.0-flash')
@@ -33,5 +39,10 @@ async def detect_ai(text: str, api_key: str = None) -> Dict[str, Any]:
         logger.info(f"AI detection complete. Probability: {result.get('ai_probability')}")
         return result
     except Exception as e:
-        logger.error(f"AI detection failed, using fallback. Error: {str(e)}")
-        return {"ai_probability": 0.0, "signals_detected": [], "confidence": "high"}
+        logger.warning(f"AI detection LLM failed, using heuristic fallback. Error: {str(e)}")
+        res = analyze_text_heuristics(text)
+        return {
+            "ai_probability": res["ai_probability"],
+            "signals_detected": res["signals"],
+            "confidence": "high" if (res["ai_probability"] > 0.65 or res["ai_probability"] < 0.35) else "medium"
+        }

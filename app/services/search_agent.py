@@ -22,13 +22,14 @@ def is_authoritative(url: str) -> bool:
     return False
 
 from app.utils.gemini_client import generate_content_with_fallback
+from app.utils.validators import is_valid_api_key
 
 async def generate_query(claim: str, api_key: str = None) -> str:
     prompt = SEARCH_QUERY_PROMPT.format(claim=claim)
-    key_to_use = api_key or settings.GEMINI_API_KEY
-    if not key_to_use:
+    key_to_use = api_key if is_valid_api_key(api_key) else settings.GEMINI_API_KEY
+    if not is_valid_api_key(key_to_use):
         return claim[:60]
-    client = genai.Client(api_key=key_to_use)
+    client = genai.Client(api_key=key_to_use.strip())
     try:
         response = await generate_content_with_fallback(client, contents=prompt, preferred_model='gemini-2.0-flash')
         query = response.text.strip()
@@ -40,7 +41,7 @@ async def generate_query(claim: str, api_key: str = None) -> str:
 
 async def tavily_search(query: str) -> List[Dict[str, Any]]:
     key = settings.TAVILY_API_KEY
-    if not key:
+    if not is_valid_api_key(key):
         raise RuntimeError("No Tavily API key configured")
     try:
         from tavily import AsyncTavilyClient

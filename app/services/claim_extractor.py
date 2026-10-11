@@ -18,17 +18,21 @@ def clean_json_response(text: str) -> str:
         text = text[:-3]
     return text.strip()
 
+from app.utils.validators import is_valid_api_key
+
 async def extract_claims(text: str, api_key: str = None) -> list[str]:
     prompt = CLAIM_EXTRACTION_PROMPT.format(article_text=text)
-    key_to_use = api_key or settings.GEMINI_API_KEY
+    key_to_use = api_key if is_valid_api_key(api_key) else settings.GEMINI_API_KEY
+    if not is_valid_api_key(key_to_use):
+        key_to_use = None
     
     if not key_to_use:
-        # Fallback if no key is configured
+        # Fallback if no valid key is configured
         if len(text.strip()) >= 5:
             return [text.strip()[:200]]
-        return []
+        return [text.strip()] if text.strip() else []
 
-    client = genai.Client(api_key=key_to_use)
+    client = genai.Client(api_key=key_to_use.strip())
     
     try:
         response = await generate_content_with_fallback(client, contents=prompt, preferred_model='gemini-2.0-flash')
@@ -40,7 +44,7 @@ async def extract_claims(text: str, api_key: str = None) -> list[str]:
         logger.warning(f"Claim extraction API failed ({str(e)}), attempting direct claim fallback...")
         if len(text.strip()) >= 5:
             return [text.strip()[:200]]
-        raise RuntimeError(f"Claim extraction failed: {str(e)}")
+        return [text.strip()] if text.strip() else []
 
     valid_claims = []
     for claim in claims:

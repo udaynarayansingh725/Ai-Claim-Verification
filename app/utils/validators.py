@@ -1,6 +1,20 @@
 import re
 from fastapi import UploadFile, HTTPException
 
+def is_valid_api_key(key: str | None) -> bool:
+    if not key:
+        return False
+    k = key.strip()
+    if len(k) < 15:
+        return False
+    lower_k = k.lower()
+    if any(placeholder in lower_k for placeholder in [
+        "your_gemini_api_key", "your_api_key", "your_tavily_api_key",
+        "demo_key", "placeholder", "undefined", "null", "none", "insert"
+    ]):
+        return False
+    return True
+
 def get_mime_type(content: bytes) -> str:
     if content.startswith(b'\xff\xd8'):
         return 'image/jpeg'

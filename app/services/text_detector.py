@@ -2,11 +2,14 @@ import json
 import time
 import asyncio
 import traceback
+from typing import Optional, Dict, Any
 from google import genai
-from typing import Dict, Any
 from app.core.prompts import TEXT_DETECTION_SYSTEM_PROMPT, TEXT_DETECTION_USER_PROMPT
+from app.core.config import settings
 from app.core.logger import get_logger
 from app.utils.gemini_client import generate_content_sync_with_fallback
+from app.services.heuristics import analyze_text_heuristics
+from app.utils.validators import is_valid_api_key
 
 logger = get_logger(__name__)
 
@@ -17,15 +20,33 @@ def parse_confidence(prob: float) -> str:
         return "uncertain"
     return "ai_generated"
 
-async def detect_text_content(text: str, api_key: str) -> dict:
+async def detect_text_content(text: str, api_key: Optional[str] = None) -> dict:
     start_time = time.time()
     logger.info("Starting AI text detection")
-    client = genai.Client(api_key=api_key)
     
-    system_prompt = TEXT_DETECTION_SYSTEM_PROMPT
-    user_prompt = TEXT_DETECTION_USER_PROMPT.format(text=text)
+    # Sanitize and resolve API key
+    key_to_use = api_key if is_valid_api_key(api_key) else settings.GEMINI_API_KEY
+    if not is_valid_api_key(key_to_use):
+        key_to_use = None
+    else:
+        key_to_use = key_to_use.strip()
+
+    if not key_to_use:
+        logger.info("No valid Gemini API key available; executing local heuristic statistical analysis")
+        heuristic_res = analyze_text_heuristics(text)
+        processing_time = int((time.time() - start_time) * 1000)
+        return {
+            "result": heuristic_res["result"],
+            "confidence": heuristic_res["ai_probability"],
+            "signals": heuristic_res["signals"],
+            "processing_time_ms": processing_time
+        }
 
     try:
+        client = genai.Client(api_key=key_to_use)
+        system_prompt = TEXT_DETECTION_SYSTEM_PROMPT
+        user_prompt = TEXT_DETECTION_USER_PROMPT.format(text=text)
+
         def make_call():
             config = genai.types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -47,11 +68,12 @@ async def detect_text_content(text: str, api_key: str) -> dict:
             "processing_time_ms": processing_time
         }
     except Exception as e:
-        logger.error(f"Text detection failed: {e}\n{traceback.format_exc()}")
+        logger.warning(f"Text detection LLM failed ({e}), falling back to local heuristic analysis")
+        heuristic_res = analyze_text_heuristics(text)
         processing_time = int((time.time() - start_time) * 1000)
         return {
-            "result": "uncertain",
-            "confidence": 0.5,
-            "signals": [f"Detection unavailable: {str(e)[:100]}"],
+            "result": heuristic_res["result"],
+            "confidence": heuristic_res["ai_probability"],
+            "signals": heuristic_res["signals"],
             "processing_time_ms": processing_time
         }

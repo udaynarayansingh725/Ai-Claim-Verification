@@ -409,7 +409,10 @@
         // AI Content Detection Handler (REST)
         async function runAiDetection(mode) {
             const apiKey = document.getElementById('globalApiKey').value.trim();
-            const headers = { 'x-api-key': apiKey || 'demo_key' };
+            const headers = {};
+            if (apiKey && apiKey !== 'demo_key') {
+                headers['x-api-key'] = apiKey;
+            }
             let url = `/detect/${mode}`;
             let options = { method: 'POST', headers: headers };
 

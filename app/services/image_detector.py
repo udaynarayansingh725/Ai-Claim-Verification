@@ -15,7 +15,7 @@ from app.utils.validators import is_valid_api_key
 
 logger = get_logger(__name__)
 
-async def detect_image_content(image_bytes: bytes, api_key: Optional[str] = None) -> dict:
+async def detect_image_content(image_bytes: bytes, api_key: Optional[str] = None, filename: str = "") -> dict:
     start_time = time.time()
     logger.info("Starting AI image detection")
     
@@ -28,7 +28,7 @@ async def detect_image_content(image_bytes: bytes, api_key: Optional[str] = None
 
     if not key_to_use:
         logger.info("No valid Gemini API key available; executing local heuristic image analysis")
-        heuristic_res = analyze_image_heuristics(image_bytes)
+        heuristic_res = analyze_image_heuristics(image_bytes, filename=filename)
         processing_time = int((time.time() - start_time) * 1000)
         return {
             "result": heuristic_res["result"],
@@ -71,7 +71,7 @@ async def detect_image_content(image_bytes: bytes, api_key: Optional[str] = None
         }
     except Exception as e:
         logger.warning(f"Image detection LLM failed ({e}), falling back to local heuristic analysis")
-        heuristic_res = analyze_image_heuristics(image_bytes)
+        heuristic_res = analyze_image_heuristics(image_bytes, filename=filename)
         processing_time = int((time.time() - start_time) * 1000)
         return {
             "result": heuristic_res["result"],

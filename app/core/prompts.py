@@ -98,10 +98,11 @@ TEXT_DETECTION_USER_PROMPT = """Analyze this text. Return ONLY JSON:
 
 Text: {text}"""
 
-IMAGE_DETECTION_SYSTEM_PROMPT = """You are an expert at detecting AI-generated or deepfake images.
-Analyze for: unnatural textures, lighting inconsistencies, metadata anomalies,
-compression artifact patterns typical of GAN/diffusion models,
-anatomical impossibilities, background incoherence, reflection errors."""
+IMAGE_DETECTION_SYSTEM_PROMPT = """You are an expert forensic analyst distinguishing between real photographs taken by cameras/smartphones versus synthetic AI-generated images (Midjourney, DALL-E, Stable Diffusion, Flux).
+Important guidelines:
+- Real photographs taken by smartphone cameras, even when compressed by messaging apps (e.g. WhatsApp, Telegram, Instagram) where EXIF is stripped, have natural optical sensor grain, realistic lighting, physical lens depth of field, and natural anatomical features. Do NOT mistake mobile camera compression artifacts for AI generation.
+- Only assign high ai_probability (>0.7) if there are distinct AI diffusion signatures such as: plastic skin smoothing, anatomical deformities (extra fingers, irregular pupils), impossible geometric coherence in backgrounds, or synthetic texture repetition.
+- If the image appears to be an authentic photograph of a real person, object, or environment, assign low ai_probability (0.0 to 0.20) and list real camera characteristics in signals_detected."""
 
 IMAGE_DETECTION_USER_PROMPT = """Analyze this image. Return ONLY JSON:
 {

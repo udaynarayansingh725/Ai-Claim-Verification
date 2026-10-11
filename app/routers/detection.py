@@ -36,7 +36,7 @@ async def detect_image(file: UploadFile = File(...), api_key: Optional[str] = De
     except Exception:
         raise HTTPException(status_code=422, detail="Could not read file. It may be corrupted.")
         
-    result = await detect_image_content(file_bytes, api_key)
+    result = await detect_image_content(file_bytes, api_key, filename=file.filename or "")
     return result
 
 @router.post("/pdf", response_model=DetectionResult)

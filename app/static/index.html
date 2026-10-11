@@ -445,10 +445,16 @@
                 
                 document.getElementById('aiResultCard').classList.remove('hidden');
                 
+                let humanLabel = 'Human Written';
+                let aiLabel = 'AI Generated';
+                if (mode === 'image') {
+                    humanLabel = 'Real Camera / Human Photo';
+                    aiLabel = 'AI Generated Image';
+                }
                 const verdictMap = {
-                    'human_written': '<span class="text-emerald-400">Human Written</span>',
+                    'human_written': `<span class="text-emerald-400">${humanLabel}</span>`,
                     'uncertain': '<span class="text-amber-400">Uncertain / Mixed</span>',
-                    'ai_generated': '<span class="text-rose-400">AI Generated</span>'
+                    'ai_generated': `<span class="text-rose-400">${aiLabel}</span>`
                 };
                 document.getElementById('aiVerdict').innerHTML = verdictMap[data.result] || data.result;
                 document.getElementById('aiProbPercent').innerText = `${Math.round(data.confidence * 100)}%`;

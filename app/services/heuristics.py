@@ -114,10 +114,30 @@ def analyze_text_heuristics(text: str) -> Dict[str, Any]:
             signals.append("Natural sentence flow with organic structural variation")
             
     result = "ai_generated" if prob >= 0.65 else ("uncertain" if prob >= 0.35 else "human_written")
+
+    # Generate sentence-level breakdown for sentence highlighter
+    sentence_scores = []
+    raw_sentences = [s.strip() for s in re.split(r'(?<=[.!?\n])\s+', clean_text) if s.strip()]
+    for s in raw_sentences:
+        s_lower = s.lower()
+        s_prob = prob
+        has_marker = any(m in s_lower for m in AI_MARKER_PHRASES)
+        has_list = bool(re.match(r'^\s*[-*•\d\.]+\s+([A-Za-z0-9\s]+):', s))
+        if has_marker or has_list:
+            s_prob = min(0.98, prob + 0.15)
+        elif len(s.split()) < 5:
+            s_prob = max(0.15, prob - 0.10)
+        sentence_scores.append({
+            "text": s,
+            "ai_probability": round(s_prob, 2),
+            "is_ai": s_prob >= 0.65
+        })
+
     return {
         "ai_probability": prob,
         "signals": signals,
-        "result": result
+        "result": result,
+        "sentence_scores": sentence_scores
     }
 
 def analyze_image_heuristics(image_bytes: bytes, filename: str = "") -> Dict[str, Any]:

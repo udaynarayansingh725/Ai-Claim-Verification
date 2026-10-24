@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional, Dict, Any
 
 class WSRequest(BaseModel):
     content: str
@@ -40,6 +40,7 @@ class DetectionResult(BaseModel):
     confidence: float
     signals: List[str]
     processing_time_ms: int
+    sentence_scores: Optional[List[Dict[str, Any]]] = None
 
 class TextRequest(BaseModel):
     text: str

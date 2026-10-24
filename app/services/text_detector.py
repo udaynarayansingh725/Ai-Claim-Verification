@@ -39,6 +39,7 @@ async def detect_text_content(text: str, api_key: Optional[str] = None) -> dict:
             "result": heuristic_res["result"],
             "confidence": heuristic_res["ai_probability"],
             "signals": heuristic_res["signals"],
+            "sentence_scores": heuristic_res.get("sentence_scores", []),
             "processing_time_ms": processing_time
         }
 
@@ -61,10 +62,16 @@ async def detect_text_content(text: str, api_key: Optional[str] = None) -> dict:
         
         processing_time = int((time.time() - start_time) * 1000)
         logger.info(f"Text detection complete in {processing_time}ms: {prob} probability")
+        
+        # Sentence scores generator for LLM results
+        raw_sentences = [s.strip() for s in text.splitlines() if s.strip()] or [text]
+        sentence_scores = [{"text": s, "ai_probability": prob, "is_ai": prob >= 0.65} for s in raw_sentences]
+
         return {
             "result": parse_confidence(prob),
             "confidence": prob,
             "signals": data.get("signals_detected", []),
+            "sentence_scores": sentence_scores,
             "processing_time_ms": processing_time
         }
     except Exception as e:
@@ -75,5 +82,6 @@ async def detect_text_content(text: str, api_key: Optional[str] = None) -> dict:
             "result": heuristic_res["result"],
             "confidence": heuristic_res["ai_probability"],
             "signals": heuristic_res["signals"],
+            "sentence_scores": heuristic_res.get("sentence_scores", []),
             "processing_time_ms": processing_time
         }

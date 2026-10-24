@@ -67,6 +67,80 @@
             transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
+        /* ========================================== */
+        /* LIGHT / WHITE MODE THEME OVERRIDES         */
+        /* ========================================== */
+        html.light body {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+        }
+        html.light header {
+            background: rgba(255, 255, 255, 0.92) !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        }
+        html.light .glass {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+        }
+        html.light .glass-card {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.02) !important;
+        }
+        html.light textarea,
+        html.light input[type="password"],
+        html.light input[type="text"] {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+        }
+        html.light textarea::placeholder,
+        html.light input::placeholder {
+            color: #94a3b8 !important;
+        }
+        html.light .text-white,
+        html.light .text-slate-100 {
+            color: #0f172a !important;
+        }
+        html.light .text-slate-200 {
+            color: #1e293b !important;
+        }
+        html.light .text-slate-300 {
+            color: #334155 !important;
+        }
+        html.light .text-slate-400 {
+            color: #64748b !important;
+        }
+        html.light .border-darkborder {
+            border-color: #e2e8f0 !important;
+        }
+        html.light .bg-slate-900,
+        html.light .bg-slate-900\/90,
+        html.light .bg-slate-900\/80,
+        html.light .bg-slate-900\/70,
+        html.light .bg-slate-900\/60,
+        html.light .bg-slate-950\/80,
+        html.light .bg-slate-950\/70,
+        html.light .bg-slate-950\/60,
+        html.light .bg-slate-950\/50,
+        html.light .bg-slate-950\/40 {
+            background-color: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+        }
+        html.light .drawer-panel {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+        }
+        html.light .gauge-circle-track {
+            stroke: #e2e8f0 !important;
+        }
+        html.light footer {
+            border-color: #e2e8f0 !important;
+            background-color: #f8fafc !important;
+        }
+
         /* Printable Report */
         @media print {
             body { background: white !important; color: black !important; }
@@ -105,8 +179,25 @@
                 </div>
             </div>
 
-            <!-- Right Controls: History Drawer + API Key -->
-            <div class="flex items-center space-x-3">
+            <!-- Right Controls: Theme Switcher + History Drawer + API Key -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                
+                <!-- 3-Mode Theme Selector: Light, Default/System, Dark -->
+                <div class="flex items-center bg-slate-900/90 rounded-xl p-1 border border-darkborder shadow-sm" id="themeSwitcherGroup">
+                    <button onclick="setTheme('light')" id="themeBtn-light" title="White / Light Mode" 
+                        class="p-1.5 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-amber-400 transition-all flex items-center">
+                        <i class="fa-solid fa-sun text-amber-400"></i>
+                    </button>
+                    <button onclick="setTheme('system')" id="themeBtn-system" title="Default / System Mode" 
+                        class="p-1.5 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-cyan-400 transition-all flex items-center">
+                        <i class="fa-solid fa-desktop text-cyan-400"></i>
+                    </button>
+                    <button onclick="setTheme('dark')" id="themeBtn-dark" title="Dark Mode" 
+                        class="p-1.5 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-indigo-400 transition-all flex items-center">
+                        <i class="fa-solid fa-moon text-indigo-400"></i>
+                    </button>
+                </div>
+
                 <button onclick="toggleHistoryDrawer(true)" class="bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-3 py-2 rounded-xl border border-darkborder text-xs font-semibold flex items-center space-x-2 transition-all shadow-sm">
                     <i class="fa-solid fa-clock-rotate-left text-brand-400"></i>
                     <span class="hidden sm:inline">Scan History</span>
@@ -218,7 +309,7 @@
                         <!-- SVG Radial Gauge -->
                         <div class="relative w-28 h-28 flex-shrink-0">
                             <svg class="w-28 h-28" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="40" stroke="#1f293d" stroke-width="8" fill="transparent"/>
+                                <circle class="gauge-circle-track" cx="50" cy="50" r="40" stroke="#1f293d" stroke-width="8" fill="transparent"/>
                                 <circle id="factGaugeCircle" class="gauge-circle" cx="50" cy="50" r="40" 
                                     stroke="#22c55e" stroke-width="8" stroke-linecap="round" fill="transparent"
                                     stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
@@ -407,7 +498,7 @@
                     <div class="md:col-span-5 flex items-center space-x-5">
                         <div class="relative w-28 h-28 flex-shrink-0">
                             <svg class="w-28 h-28" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="40" stroke="#1f293d" stroke-width="8" fill="transparent"/>
+                                <circle class="gauge-circle-track" cx="50" cy="50" r="40" stroke="#1f293d" stroke-width="8" fill="transparent"/>
                                 <circle id="aiGaugeCircle" class="gauge-circle" cx="50" cy="50" r="40" 
                                     stroke="#22c55e" stroke-width="8" stroke-linecap="round" fill="transparent"
                                     stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
@@ -1296,6 +1387,61 @@
         document.getElementById('aiTextContent').addEventListener('input', (e) => {
             document.getElementById('aiCharCount').innerText = `${e.target.value.length} characters`;
         });
+
+        // ==========================================
+        // THEME MANAGER (WHITE, SYSTEM, DARK)
+        // ==========================================
+        const THEME_STORAGE_KEY = 'factify_theme_preference';
+
+        function applyTheme(theme) {
+            const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+
+            // Update UI icon styles
+            const themeConfigs = {
+                light: { active: 'bg-amber-500/20 text-amber-500 border border-amber-500/30' },
+                system: { active: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' },
+                dark: { active: 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' }
+            };
+
+            ['light', 'system', 'dark'].forEach(t => {
+                const btn = document.getElementById(`themeBtn-${t}`);
+                if (!btn) return;
+                if (t === theme) {
+                    btn.className = `p-1.5 px-2 rounded-lg text-xs font-semibold ${themeConfigs[t].active} shadow-sm transition-all flex items-center`;
+                } else {
+                    btn.className = "p-1.5 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center";
+                }
+            });
+        }
+
+        function setTheme(theme) {
+            localStorage.setItem(THEME_STORAGE_KEY, theme);
+            applyTheme(theme);
+            const names = {
+                light: 'White / Light Mode Activated ☀️',
+                system: 'Default / System Mode Activated 💻',
+                dark: 'Dark Mode Activated 🌙'
+            };
+            showToast(names[theme] || 'Theme Updated', 'info');
+        }
+
+        // Listen for OS system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+            if (saved === 'system') applyTheme('system');
+        });
+
+        // Initialize theme on page load
+        const initialTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+        applyTheme(initialTheme);
 
         // Initialize history count on startup
         updateHistoryBadge();

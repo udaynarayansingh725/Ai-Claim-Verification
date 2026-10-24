@@ -1,15 +1,12 @@
 import json
 import time
 import asyncio
-import traceback
 from typing import Optional, Dict, Any
-from google import genai
 from app.core.prompts import TEXT_DETECTION_SYSTEM_PROMPT, TEXT_DETECTION_USER_PROMPT
 from app.core.config import settings
 from app.core.logger import get_logger
-from app.utils.gemini_client import generate_content_sync_with_fallback
+from app.utils.llm_client import generate_text_unified, clean_json_response, has_any_llm_key
 from app.services.heuristics import analyze_text_heuristics
-from app.utils.validators import is_valid_api_key
 
 logger = get_logger(__name__)
 
@@ -24,15 +21,8 @@ async def detect_text_content(text: str, api_key: Optional[str] = None) -> dict:
     start_time = time.time()
     logger.info("Starting AI text detection")
     
-    # Sanitize and resolve API key
-    key_to_use = api_key if is_valid_api_key(api_key) else settings.GEMINI_API_KEY
-    if not is_valid_api_key(key_to_use):
-        key_to_use = None
-    else:
-        key_to_use = key_to_use.strip()
-
-    if not key_to_use:
-        logger.info("No valid Gemini API key available; executing local heuristic statistical analysis")
+    if not has_any_llm_key(api_key):
+        logger.info("No valid Gemini or OpenAI API key available; executing local heuristic statistical analysis")
         heuristic_res = analyze_text_heuristics(text)
         processing_time = int((time.time() - start_time) * 1000)
         return {
@@ -44,20 +34,15 @@ async def detect_text_content(text: str, api_key: Optional[str] = None) -> dict:
         }
 
     try:
-        client = genai.Client(api_key=key_to_use)
-        system_prompt = TEXT_DETECTION_SYSTEM_PROMPT
         user_prompt = TEXT_DETECTION_USER_PROMPT.format(text=text)
-
-        def make_call():
-            config = genai.types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.1,
-                response_mime_type="application/json"
-            )
-            return generate_content_sync_with_fallback(client, contents=[user_prompt], config=config, preferred_model='gemini-2.0-flash')
-
-        response = await asyncio.to_thread(make_call)
-        data = json.loads(response.text)
+        raw_response = await generate_text_unified(
+            prompt=user_prompt,
+            system_prompt=TEXT_DETECTION_SYSTEM_PROMPT,
+            api_key=api_key,
+            json_mode=True
+        )
+        response_text = clean_json_response(raw_response)
+        data = json.loads(response_text)
         prob = float(data.get("ai_probability", 0.0))
         
         processing_time = int((time.time() - start_time) * 1000)

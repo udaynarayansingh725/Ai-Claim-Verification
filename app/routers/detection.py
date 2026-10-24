@@ -17,6 +17,8 @@ def get_api_key(x_api_key: Optional[str] = Header(None)) -> Optional[str]:
         return x_api_key.strip()
     if is_valid_api_key(settings.GEMINI_API_KEY):
         return settings.GEMINI_API_KEY.strip()
+    if is_valid_api_key(settings.OPENAI_API_KEY):
+        return settings.OPENAI_API_KEY.strip()
     return None
 
 @router.post("/text", response_model=DetectionResult)

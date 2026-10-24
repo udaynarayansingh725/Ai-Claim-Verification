@@ -5,6 +5,7 @@ sqlalchemy
 asyncpg
 alembic
 google-genai
+openai>=1.50.0
 tavily-python
 duckduckgo-search
 trafilatura

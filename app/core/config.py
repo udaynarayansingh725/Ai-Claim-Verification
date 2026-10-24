@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
     TAVILY_API_KEY: str = ""
     DATABASE_URL: str = "sqlite+aiosqlite:///./factify.db"
 

@@ -9,11 +9,22 @@ def is_valid_api_key(key: str | None) -> bool:
         return False
     lower_k = k.lower()
     if any(placeholder in lower_k for placeholder in [
-        "your_gemini_api_key", "your_api_key", "your_tavily_api_key",
+        "your_gemini_api_key", "your_openai_api_key", "your_api_key", "your_tavily_api_key",
         "demo_key", "placeholder", "undefined", "null", "none", "insert"
     ]):
         return False
     return True
+
+def is_openai_key(key: str | None) -> bool:
+    if not is_valid_api_key(key):
+        return False
+    k = key.strip()
+    return k.startswith("sk-") or "openai" in k.lower()
+
+def is_gemini_key(key: str | None) -> bool:
+    if not is_valid_api_key(key):
+        return False
+    return not is_openai_key(key)
 
 def get_mime_type(content: bytes) -> str:
     if content.startswith(b'\xff\xd8'):

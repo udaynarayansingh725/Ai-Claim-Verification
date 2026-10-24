@@ -3,9 +3,10 @@ from typing import List, Dict, Any, Tuple
 from duckduckgo_search import DDGS
 from app.core.config import settings
 from app.core.prompts import SEARCH_QUERY_PROMPT
-from google import genai
 from urllib.parse import urlparse
 from app.core.logger import get_logger
+from app.utils.llm_client import generate_text_unified, has_any_llm_key
+from app.utils.validators import is_valid_api_key
 
 logger = get_logger(__name__)
 
@@ -21,18 +22,13 @@ def is_authoritative(url: str) -> bool:
             return True
     return False
 
-from app.utils.gemini_client import generate_content_with_fallback
-from app.utils.validators import is_valid_api_key
-
 async def generate_query(claim: str, api_key: str = None) -> str:
     prompt = SEARCH_QUERY_PROMPT.format(claim=claim)
-    key_to_use = api_key if is_valid_api_key(api_key) else settings.GEMINI_API_KEY
-    if not is_valid_api_key(key_to_use):
+    if not has_any_llm_key(api_key):
         return claim[:60]
-    client = genai.Client(api_key=key_to_use.strip())
     try:
-        response = await generate_content_with_fallback(client, contents=prompt, preferred_model='gemini-2.0-flash')
-        query = response.text.strip()
+        raw_response = await generate_text_unified(prompt=prompt, api_key=api_key)
+        query = raw_response.strip().strip('"').strip("'")
         logger.debug(f"Generated search query: '{query}' for claim: '{claim[:50]}...'")
         return query
     except Exception as e:

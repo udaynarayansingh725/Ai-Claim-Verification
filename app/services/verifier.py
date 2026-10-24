@@ -1,12 +1,12 @@
 import json
 import re
 from urllib.parse import urlparse
-from google import genai
 from typing import List, Dict, Any
 from app.core.prompts import VERIFICATION_PROMPT, SELF_REFLECTION_PROMPT
 from app.core.config import settings
 from app.core.logger import get_logger
-from app.utils.gemini_client import generate_content_with_fallback
+from app.utils.llm_client import generate_text_unified, clean_json_response, has_any_llm_key
+from app.utils.validators import is_valid_api_key
 
 logger = get_logger(__name__)
 
@@ -91,16 +91,6 @@ def heuristic_verify_claim(claim: str, sources: List[Dict[str, str]]) -> Dict[st
         "conflicting_sources": conflicting
     }
 
-def clean_json_response(text: str) -> str:
-    text = text.strip()
-    if text.startswith("```json"):
-        text = text[7:]
-    elif text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-    return text.strip()
-
 def build_evidence_block(sources: List[Dict[str, str]]) -> str:
     parts = []
     for i, src in enumerate(sources[:5], start=1):
@@ -110,16 +100,12 @@ def build_evidence_block(sources: List[Dict[str, str]]) -> str:
         parts.append(f"[Source {i}] {title}\nURL: {url}\nExcerpt: {content}\n")
     return "\n".join(parts)
 
-from app.utils.validators import is_valid_api_key
-
 async def _verify_with_prompt(prompt: str, api_key: str = None) -> Dict[str, Any]:
-    key_to_use = api_key if is_valid_api_key(api_key) else settings.GEMINI_API_KEY
-    if not is_valid_api_key(key_to_use):
+    if not has_any_llm_key(api_key):
         raise ValueError("No valid API key configured")
 
-    client = genai.Client(api_key=key_to_use.strip())
-    response = await generate_content_with_fallback(client, contents=prompt, preferred_model='gemini-2.0-flash')
-    text = clean_json_response(response.text)
+    raw_response = await generate_text_unified(prompt=prompt, api_key=api_key, json_mode=True)
+    text = clean_json_response(raw_response)
     return json.loads(text)
 
 async def verify_claim(claim: str, sources: List[Dict[str, str]], api_key: str = None) -> Dict[str, Any]:

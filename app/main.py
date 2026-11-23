@@ -8,11 +8,18 @@ from app.api.routes.health import health_router
 from app.core.logger import setup_logging
 from contextlib import asynccontextmanager
 from app.routers.detection import router as detection_router
+from app.db.database import engine, Base
+import app.db.models
 import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        print(f"Database initialization warning: {e}")
     yield
 
 app = FastAPI(title="AI GENERATED CONTENT DETECTION ENGINE API", lifespan=lifespan)
